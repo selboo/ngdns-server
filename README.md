@@ -54,7 +54,7 @@ stream {
 
     server {
         listen 53 udp ;
-        content_by_lua_file conf/2953.lua;
+        content_by_lua_file conf/53.lua;
     }
 
 
