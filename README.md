@@ -83,9 +83,9 @@ OK
 #### CNAME
 
 ```
-## tld|sub|view|type   value|ttl    string
+## tld|sub|view|type   value|ttl    set
 # redis-cli
-127.0.0.1:6379> set aikaiyuan.com|www|*|CNAME   aikaiyuan.appchizi.com.|3600
+127.0.0.1:6379> sadd aikaiyuan.com|www|*|CNAME   aikaiyuan.appchizi.com.|3600
 OK
 # dig @127.0.0.1 www.aikaiyuan.com CNAME
 ```

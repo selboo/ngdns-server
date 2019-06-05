@@ -1,5 +1,6 @@
 
 require 'resty.core.regex'
+
 local gsub   = string.gsub
 local find   = ngx.re.find
 local ssub   = string.sub
@@ -8,6 +9,7 @@ local gsub   = string.gsub
 local server = require 'resty.dns.server'
 local sock, err = ngx.req.socket()
 local dns = server:new()
+
 local redis = require "resty.redis"
 local red = redis:new()
 red:set_timeout(3000)
@@ -26,28 +28,35 @@ local function ver_and_ttl ( key, re )
     end
 end
 
-
-local function getdns( key, rtype )
+local function redisconnect()
     local ok, err = red:connect("127.0.0.1", 6379)
-    local ver = ""
     if not ok then
         ngx.log(ngx.ERR, "1003 connect 127.0.0.1:6379 redis fail: ", err)
+        return false, err
     end
+
+    return red, _
+end
+
+local function existsdns( key )
+    local red , err = redisconnect()
+
+    local ver, err = red:exists(key)
+    return ver
+end
+
+local function getdns( key, rtype )
+
+    local red , err = redisconnect()
+    local ver = ""
 
     ngx.log(ngx.DEBUG, "getdns key:", key, " rtype: ", rtype)
 
-    if rtype == "string" then
-        ver, err = red:get(key)
-    elseif rtype == "set" then
-        ver, err = red:smembers(key)
-    else
+    ver, err = red:smembers(key)
+    if not err then
         ngx.log(ngx.DEBUG, "error rtype: ", rtype)
+    else
         ver, err = "", "null"
-    end
-
-    local ok, _ = red:set_keepalive(10000, 100)
-    if not ok then
-        ngx.log(ngx.DEBUG, "failed to set keepalive")
     end
 
     return ver, err
@@ -131,22 +140,22 @@ end
 
 if query.qtype == server.TYPE_CNAME then
     -- CNAME
-    --     tld|sub|view|type   value|ttl    string
-    -- set aikaiyuan.com|www|*|CNAME   aikaiyuan.appchizi.com.|3600
+    --     tld|sub|view|type   value|ttl    set
+    -- sadd aikaiyuan.com|www|*|CNAME   aikaiyuan.appchizi.com.|3600
 
     local key = tld .. "|" .. sub .. "|" .. view .. "|" .. "CNAME"
-    local redis_value = getdns(key, "string")
+    local redis_value = getdns(key)
     ngx.log(ngx.DEBUG, "TYPE_CNAME key: ", key)
 
-    local ver, ttl, err = ver_and_ttl(redis_value, "\\|")
-    if not err then
+    for _, ver in ipairs(redis_value) do
+        ngx.log(ngx.DEBUG, "CNAME: ", ver)
+
+        local ver, ttl, err = ver_and_ttl(ver, "\\|")
         ngx.log(ngx.DEBUG, " ver: ", ver, " ttl: ", ttl)
-    else
-        ngx.log(ngx.DEBUG, "find error: ", err)
-        return 
+
+        dns:create_cname_answer(query.qname, ttl, ver)
+
     end
- 
-    dns:create_cname_answer(query.qname, ttl, ver)
 
 elseif query.qtype == server.TYPE_A then
     -- A
@@ -220,6 +229,8 @@ elseif  query.qtype == server.TYPE_SRV then
 else
     dns:create_soa_answer(tld, 600, "ns1.aikaiyuan.com.", "domain.aikaiyuan.com.", 1558348800, 1800, 900, 604800, 86400)
 end
+
+
 
 local resp = dns:encode_response()
 local ok, err = sock:send(resp)
