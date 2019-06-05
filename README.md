@@ -52,6 +52,8 @@ stream {
     lua_package_path '/usr/local/openresty-dns/lualib/?.lua;/usr/local/openresty-dns/nginx/conf/?.lua;;';
     lua_package_cpath '/usr/local/openresty-dns/lualib/?.so;;';
 
+    lua_shared_dict QUERYCACHE 32m;
+
     server {
         listen 53 udp ;
         content_by_lua_file conf/53.lua;

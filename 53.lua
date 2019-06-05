@@ -10,6 +10,11 @@ local server = require 'resty.dns.server'
 local sock, err = ngx.req.socket()
 local dns = server:new()
 
+local QC = ngx.shared.QUERYCACHE
+local QC_TIMTOUT = 10
+
+local cjson = require "cjson"
+
 local redis = require "resty.redis"
 local red = redis:new()
 red:set_timeout(3000)
@@ -17,7 +22,7 @@ red:set_timeout(3000)
 local request_remote_addr = ngx.var.remote_addr
 
 local function ver_and_ttl ( key, re )
-    local m, err = find(key, re, "jo")
+    local m, err = find(key, re, "ijo")
     if m then
         local ver = ssub(key, 1, m - 1)
         local ttl = ssub(key, m + 1 , -1)
@@ -38,28 +43,60 @@ local function redisconnect()
     return red, _
 end
 
+local function _getcache( prefix, key )
+    local var, err = QC:get(prefix .. key)
+    if var then
+        ngx.log(ngx.DEBUG, "HIT key: " .. prefix .. key .. " value: ", var)
+        return var
+    end
+
+    return false
+end
+
+local function _setcache( prefix, key, value, ttl )
+    local ttl = ttl or QC_TIMTOUT
+    local succ, err = QC:add(prefix .. key, value, ttl)
+    if err then
+        ngx.log(ngx.ERR, "setcache key: " .. prefix .. key .. " error: ", err)
+    else
+        ngx.log(ngx.WARN, "setcache key: " .. prefix .. key .. " value: " .. value .. " ttl: ", ttl)
+    end
+
+    return value
+end
+
 local function existsdns( key )
     local red , err = redisconnect()
 
-    local ver, err = red:exists(key)
-    return ver
+    local value = _getcache("_exist_", key)
+    if value then
+        return value
+    else
+        local ver, err = red:exists(key)
+        return _setcache("_exist_", key, ver)
+    end
 end
 
-local function getdns( key )
+local function getdns( prefix, key )
 
-    local red , err = redisconnect()
-    local ver = ""
-
-    ngx.log(ngx.DEBUG, "getdns key:", key)
-
-    ver, err = red:smembers(key)
-    if not err then
-        ngx.log(ngx.DEBUG, "error smembers: ", err)
+    local value = _getcache(prefix, key)
+    if value then
+        return cjson.decode(value), _
     else
-        ver, err = "", "null"
-    end
+        local red , err = redisconnect()
+        local ver = ""
 
-    return ver, err
+        ngx.log(ngx.DEBUG, "getdns key:", key)
+
+        local ver, err = red:smembers(key)
+        if err then
+            ngx.log(ngx.DEBUG, "error smembers: ", err)
+        else
+            _setcache(prefix, key, cjson.encode(ver))
+        end
+
+        return ver, err
+    end
 
 end
 
@@ -139,6 +176,8 @@ if not err then
 end
 
 
+
+
 local function _cname( key )
     -- CNAME
     --     tld|sub|view|type   value|ttl    set
@@ -166,8 +205,8 @@ local function _a( key )
     -- sadd aikaiyuan.com|lb|*|A 220.181.136.165|3600 220.181.136.166|3600
 
     local key = key .. "A"
-    local redis_value = getdns(key)
     ngx.log(ngx.DEBUG, "TYPE_A key: ", key)
+    local redis_value = getdns("_A_", key)
 
     for _, ver in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, "A: ", ver)
