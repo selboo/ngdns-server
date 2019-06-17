@@ -2,16 +2,15 @@
 require 'resty.core.regex'
 
 local gsub   = string.gsub
-local find   = ngx.re.find
 local ssub   = string.sub
-local gsub   = string.gsub
+local find   = ngx.re.find
 
 local server = require 'resty.dns.server'
 local sock, err = ngx.req.socket()
 local dns = server:new()
 
 local QC = ngx.shared.QUERYCACHE
-local QC_TIMTOUT = 10
+local QC_TIMTOUT = 1
 
 local cjson = require "cjson"
 
@@ -21,8 +20,11 @@ red:set_timeout(3000)
 
 local request_remote_addr = ngx.var.remote_addr
 
-local function ver_and_ttl ( key, re )
-    local m, err = find(key, re, "ijo")
+
+
+
+local function ver_and_ttl ( key )
+    local m, err = find(key, "\\|", "ijo")
     if m then
         local ver = ssub(key, 1, m - 1)
         local ttl = ssub(key, m + 1 , -1)
@@ -66,12 +68,12 @@ local function _setcache( prefix, key, value, ttl )
 end
 
 local function existsdns( key )
-    local red , err = redisconnect()
 
     local value = _getcache("_exist_", key)
     if value then
         return value
     else
+        local red , err = redisconnect()
         local ver, err = red:exists(key)
         return _setcache("_exist_", key, ver)
     end
@@ -165,6 +167,7 @@ local function ip_to_isp ( ip )
     return "*"
 end
 
+
 local req = init()
 local request = dnsserver(req)
 local view = ip_to_isp(request_remote_addr)
@@ -176,21 +179,18 @@ if not err then
 end
 
 
-
-
 local function _cname( key )
     -- CNAME
     --     tld|sub|view|type   value|ttl    set
     -- sadd aikaiyuan.com|www|*|CNAME   aikaiyuan.appchizi.com.|3600
 
-    local key = key .. "CNAME"
-    local redis_value = getdns(key)
+    local redis_value = getdns("_CNAME_", key)
     ngx.log(ngx.DEBUG, "TYPE_CNAME key: ", key)
 
     for _, ver in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, "CNAME: ", ver)
 
-        local ver, ttl, err = ver_and_ttl(ver, "\\|")
+        local ver, ttl, err = ver_and_ttl(ver)
         ngx.log(ngx.DEBUG, " ver: ", ver, " ttl: ", ttl)
 
         dns:create_cname_answer(query.qname, ttl, ver)
@@ -204,14 +204,13 @@ local function _a( key )
     --     tld|sub|view|type   value|ttl   set
     -- sadd aikaiyuan.com|lb|*|A 220.181.136.165|3600 220.181.136.166|3600
 
-    local key = key .. "A"
     ngx.log(ngx.DEBUG, "TYPE_A key: ", key)
     local redis_value = getdns("_A_", key)
 
     for _, ver in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, "A: ", ver)
 
-        local ver, ttl, err = ver_and_ttl(ver, "\\|")
+        local ver, ttl, err = ver_and_ttl(ver)
         ngx.log(ngx.DEBUG, " ver: ", ver, " ttl: ", ttl)
 
         dns:create_a_answer(query.qname, ttl, ver)
@@ -225,13 +224,12 @@ local function _aaaa( key )
     --     tld|sub|view|type   value|ttl   set
     -- sadd aikaiyuan.com|ipv6|*|AAAA 2400:89c0:1022:657::152:150|86400 2400:89c0:1032:157::31:1201|86400
 
-    local key = key .. "AAAA"
     local redis_value = getdns(key)
     ngx.log(ngx.DEBUG, "TYPE_AAAA key: ", key)
 
     for index, ver in ipairs(redis_value) do
 
-        local ver, ttl, err = ver_and_ttl(ver, "\\|")
+        local ver, ttl, err = ver_and_ttl(ver)
         ngx.log(ngx.DEBUG, "index: ", index, " q: ",query.qname, " ver: ", ver, " ttl: ", ttl)
 
         dns:create_aaaa_answer(query.qname, ttl, ver)
@@ -245,14 +243,13 @@ local function _mx( key )
     --     tld|sub|view|type   value|ttl   set
     -- sadd aikaiyuan.com|@|*|MX smtp1.qq.com.|720 smtp2.qq.com.|720
 
-    local key = key .. "MX"
     local redis_value = getdns(key)
     ngx.log(ngx.DEBUG, "TYPE_MX key: ", key)
 
     for _, ver in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, "A: ", ver)
 
-        local ver, ttl, err = ver_and_ttl(ver, "\\|")
+        local ver, ttl, err = ver_and_ttl(ver)
         ngx.log(ngx.DEBUG, " ver: ", ver, " ttl: ", ttl)
 
         dns:create_mx_answer(query.qname, ttl, ver)
@@ -263,7 +260,6 @@ end
 
 local function _txt( key )
 
-    local key = key .. "TXT"
     local redis_value = getdns(key)
 
     dns:create_txt_answer(query.qname, "999", "ttttttttt")
@@ -272,7 +268,6 @@ end
 
 local function _ns( key )
 
-    local key = key .. "NS"
     local redis_value = getdns(key)
 
     dns:create_ns_answer(query.qname, "999", "ns1.aikaiyuan.com")
@@ -282,20 +277,75 @@ end
 
 local function _srv( key )
 
-    local key = key .. "SRV"
     local redis_value = getdns(key)
 
     dns:create_srv_answer(query.qname, "86400", "100", "100", "80", "www.aikaiyuan.com")
 
 end
 
+local function split(s, p)
+
+    local r = {}
+    gsub(s, '[^'..p..']+', function(w) table.insert(r, w) end )
+    return r
+
+end
+
+local function issub( sub, tld, view, types )
+
+    local new_sub = split(sub, "\\.")
+    local key = tld .. "|" .. sub .. "|" .. view .. "|" .. types
+
+    if #new_sub == 1 then
+
+        return key, 0
+
+    else
+
+        for k, v in ipairs(new_sub) do
+            new_sub[k] = "*"
+            local x_sub = table.concat(new_sub,".", k )
+
+            local key = tld .. "|" .. x_sub .. "|" .. view .. "|" .. types
+            local testkey = existsdns(key)
+            if testkey == 1 then
+                return key, 1
+            end
+        end
+
+    end
+
+    return key, 0
+end
+
+local function result()
+    -- return dns
+    local resp = dns:encode_response()
+    local ok, err = sock:send(resp)
+    if not ok then
+        ngx.log(ngx.ERR, "failed to send: ", err)
+        return
+    end
+
+end
 
 
 
 if query.qtype == server.TYPE_CNAME then
 
     local key = tld .. "|" .. sub .. "|" .. view .. "|"
-    local res = _cname(key)
+
+    local testkey = existsdns(key .. "CNAME")
+    if testkey == 1 then
+        local res = _cname(key .. "CNAME")
+        return result()
+    end
+
+    local new_key, num = issub(sub, tld, view, "CNAME")
+    if num == 1 then
+        local res = _cname(new_key)
+        return result()
+    end
 
 elseif query.qtype == server.TYPE_A then
 
@@ -303,11 +353,26 @@ elseif query.qtype == server.TYPE_A then
 
     local testkey = existsdns(key .. "A")
     if testkey == 1 then
-        local res = _a(key)
-    elseif testkey == 0 then
-        local res = _cname(key)
-    else
-        return
+        local res = _a(key .. "A")
+        return result()
+    end
+
+    local new_key, num = issub(sub, tld, view, "A")
+    if num == 1 then
+        local res = _a(new_key)
+        return result()
+    end
+
+    local testkey = existsdns(key .. "CNAME")
+    if testkey == 1 then
+        local res = _cname(key .. "CNAME")
+        return result()
+    end
+
+    local new_key, num = issub(sub, tld, view, "CNAME")
+    if num == 1 then
+        local res = _cname(new_key)
+        return result()
     end
 
 elseif  query.qtype == server.TYPE_AAAA then
@@ -342,12 +407,6 @@ else
 end
 
 
-local resp = dns:encode_response()
-local ok, err = sock:send(resp)
-if not ok then
-    ngx.log(ngx.ERR, "failed to send: ", err)
-    return
-end
 
 
 
