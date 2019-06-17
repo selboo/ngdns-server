@@ -20,6 +20,14 @@ wget https://raw.githubusercontent.com/vislee/lua-resty-dns-server/master/lib/re
  -O /usr/local/openresty-dns/lualib/resty/dns/server.lua
 ```
 
+## install lua-resty-mlcache
+
+https://github.com/thibaultcha/lua-resty-mlcache
+
+```
+opm get thibaultcha/lua-resty-mlcache
+```
+
 ## install openresty-dns
 
 ```
@@ -53,6 +61,18 @@ stream {
     lua_package_cpath '/usr/local/openresty-dns/lualib/?.so;;';
 
     lua_shared_dict QUERYCACHE 32m;
+
+    init_by_lua_block {
+        local mlcache = require "resty.mlcache"
+
+        local cache, err = mlcache.new("my_cache", "QUERYCACHE", {
+            lru_size = 100000,
+            ttl      = 10,
+            neg_ttl  = 10,
+        })
+
+        _G.cache = cache
+    }
 
     server {
         listen 53 udp ;

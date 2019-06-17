@@ -9,9 +9,6 @@ local server = require 'resty.dns.server'
 local sock, err = ngx.req.socket()
 local dns = server:new()
 
-local QC = ngx.shared.QUERYCACHE
-local QC_TIMTOUT = 1
-
 local cjson = require "cjson"
 
 local redis = require "resty.redis"
@@ -55,50 +52,33 @@ local function _getcache( prefix, key )
     return false
 end
 
-local function _setcache( prefix, key, value, ttl )
-    local ttl = ttl or QC_TIMTOUT
-    local succ, err = QC:add(prefix .. key, value, ttl)
-    if err then
-        ngx.log(ngx.ERR, "setcache key: " .. prefix .. key .. " error: ", err)
-    else
-        ngx.log(ngx.WARN, "setcache key: " .. prefix .. key .. " value: " .. value .. " ttl: ", ttl)
-    end
+local function cache_exist( key )
 
-    return value
+    local red , err = redisconnect()
+    local ver, err = red:exists(key)
+    return ver
+
 end
 
 local function existsdns( key )
 
-    local value = _getcache("_exist_", key)
-    if value then
-        return value
-    else
-        local red , err = redisconnect()
-        local ver, err = red:exists(key)
-        return _setcache("_exist_", key, ver)
-    end
+    local value, err = cache:get("_exist_" .. key, nil, cache_exist, key)
+    return value
+
+end
+
+local function cache_dns( key )
+
+    local red , err = redisconnect()
+    local ver, err = red:smembers(key)
+    return cjson.encode(ver)
+
 end
 
 local function getdns( prefix, key )
 
-    local value = _getcache(prefix, key)
-    if value then
-        return cjson.decode(value), _
-    else
-        local red , err = redisconnect()
-        local ver = ""
-
-        ngx.log(ngx.DEBUG, "getdns key:", key)
-
-        local ver, err = red:smembers(key)
-        if err then
-            ngx.log(ngx.DEBUG, "error smembers: ", err)
-        else
-            _setcache(prefix, key, cjson.encode(ver))
-        end
-
-        return ver, err
-    end
+    local value, err = cache:get(prefix .. key, nil, cache_dns, key)
+    return cjson.decode(value), _
 
 end
 
@@ -347,6 +327,8 @@ if query.qtype == server.TYPE_CNAME then
         return result()
     end
 
+    return result()
+
 elseif query.qtype == server.TYPE_A then
 
     local key = tld .. "|" .. sub .. "|" .. view .. "|"
@@ -374,6 +356,8 @@ elseif query.qtype == server.TYPE_A then
         local res = _cname(new_key)
         return result()
     end
+
+    return result()
 
 elseif  query.qtype == server.TYPE_AAAA then
 
