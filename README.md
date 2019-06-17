@@ -1,4 +1,4 @@
-# openresty-dns
+# ng-dns-server
 
 dns server
 
