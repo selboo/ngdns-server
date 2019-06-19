@@ -111,3 +111,47 @@ OK
 OK
 # dig @127.0.0.1 www.aikaiyuan.com CNAME
 ```
+
+#### AAAA
+
+```
+## tld|sub|view|type   value|ttl   set
+# redis-cli
+127.0.0.1:6379> sadd aikaiyuan.com|ipv6|*|AAAA 240c::6666|60 240c::8888|60
+OK
+# dig @127.0.0.1 ipv6.aikaiyuan.com AAAA
+```
+
+#### NS
+
+```
+## tld|sub|view|type   value|ttl   set
+# redis-cli
+127.0.0.1:6379> sadd aikaiyuan.com|ns|*|NS ns10.aikaiyuan.com.|86400
+OK
+# dig @127.0.0.1 ns.aikaiyuan.com NS
+```
+
+#### TXT
+
+```
+## tld|sub|view|type   value|ttl   set
+# redis-cli
+127.0.0.1:6379> sadd aikaiyuan.com|txt|*|TXT txt.aikaiyuan.com|1200
+OK
+# dig @127.0.0.1 txt.aikaiyuan.com txt
+```
+
+#### MX
+
+```
+## tld|sub|view|type   value|ttl|preference   set
+# redis-cli
+127.0.0.1:6379> sadd aikaiyuan.com|@|*|MX smtp1.qq.com.|720|10 smtp2.qq.com.|720|10
+OK
+# dig @127.0.0.1 aikaiyuan.com MX
+```
+
+#### SRV
+
+
