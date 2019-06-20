@@ -308,7 +308,7 @@ local function _srv( prefix, key )
 
 end
 
-local function issub( sub, tld, view, types )
+local function findsub( sub, tld, view, types )
 
     local new_sub = split(sub, "\\.")
     local key = tld .. "|" .. sub .. "|" .. view .. "|" .. types
@@ -353,7 +353,7 @@ local function cname()
         return result()
     end
 
-    local new_key, num = issub(sub, tld, view, dnstyep)
+    local new_key, num = findsub(sub, tld, view, dnstyep)
     if num == 1 then
         local res = _cname(dnstyep, new_key)
         return result()
@@ -374,27 +374,13 @@ local function a()
         return result()
     end
 
-    local new_key, num = issub(sub, tld, view, dnstyep)
+    local new_key, num = findsub(sub, tld, view, dnstyep)
     if num == 1 then
         local res = _a(dnstyep, new_key)
         return result()
     end
 
-    local dnstyep = "CNAME"
-
-    local testkey = dns_exist_key(key .. dnstyep)
-    if testkey == 1 then
-        local res = _cname(dnstyep, key .. dnstyep)
-        return result()
-    end
-
-    local new_key, num = issub(sub, tld, view, dnstyep)
-    if num == 1 then
-        local res = _cname(dnstyep, new_key)
-        return result()
-    end
-
-    return result()
+    return cname()
 
 end
 
@@ -409,7 +395,7 @@ local function aaaa()
         return result()
     end
 
-    local new_key, num = issub(sub, tld, view, dnstyep)
+    local new_key, num = findsub(sub, tld, view, dnstyep)
     if num == 1 then
         local res = _aaaa(dnstyep, new_key)
         return result()
@@ -430,7 +416,7 @@ local function mx()
         return result()
     end
 
-    local new_key, num = issub(sub, tld, view, dnstyep)
+    local new_key, num = findsub(sub, tld, view, dnstyep)
     if num == 1 then
         local res = _mx(dnstyep, new_key)
         return result()
@@ -451,7 +437,7 @@ local function txt()
         return result()
     end
 
-    local new_key, num = issub(sub, tld, view, dnstyep)
+    local new_key, num = findsub(sub, tld, view, dnstyep)
     if num == 1 then
         local res = _txt(dnstyep, new_key)
         return result()
@@ -472,7 +458,7 @@ local function ns()
         return result()
     end
 
-    local new_key, num = issub(sub, tld, view, dnstyep)
+    local new_key, num = findsub(sub, tld, view, dnstyep)
     if num == 1 then
         local res = _ns(dnstyep, new_key)
         return result()
@@ -506,7 +492,18 @@ local function spf()
 end
 
 local function any()
-    -- TODO
+
+    local key = tld .. "|" .. sub .. "|" .. view .. "|"
+
+    _a("A", key .. "A")
+    _cname("CNAME", key .. "CNAME")
+    _srv("SRV", key .. "SRV")
+    _ns("NS", key .. "NS")
+    _mx("MX", key .. "MX")
+    _txt("TXT", key .. "TXT")
+    _aaaa("AAAA", key .. "AAAA")
+
+    return result()
 end
 
 local function soa()
@@ -518,17 +515,17 @@ local function soa()
 end
 
 local main = {
-    A     = function() return a()     end,  -- ok
-    NS    = function() return ns()    end,  -- ok
-    CNAME = function() return cname() end,  -- ok
-    SOA   = function() return soa()   end,  -- ok
-    PTR   = function() return ptr()   end,  -- ok
-    MX    = function() return mx()    end,  -- ok
-    TXT   = function() return txt()   end,  -- ok
-    AAAA  = function() return aaaa()  end,  -- ok
-    SRV   = function() return srv()   end,  -- ok
-    SPF   = function() return spf()   end,  -- ok
-    ANY   = function() return any()   end,  -- ok
+    A     = function() return a()     end,  -- 1
+    NS    = function() return ns()    end,  -- 2
+    CNAME = function() return cname() end,  -- 5
+    SOA   = function() return soa()   end,  -- 6
+    PTR   = function() return ptr()   end,  -- 12
+    MX    = function() return mx()    end,  -- 15
+    TXT   = function() return txt()   end,  -- 16
+    AAAA  = function() return aaaa()  end,  -- 28
+    SRV   = function() return srv()   end,  -- 33
+    SPF   = function() return spf()   end,  -- 99
+    ANY   = function() return any()   end,  -- 255
 }
 
 main[

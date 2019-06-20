@@ -169,4 +169,11 @@ OK
 
 #### SRV
 
+```
+## tld|sub|view|type   priority|weight|port|value|ttl
+# redis-cli
+127.0.0.1:6379> sadd aikaiyuan.com|srv|*|SRV 1|100|800|www.aikaiyuan.com|120
+OK
+# dig @127.0.0.1 srv.aikaiyuan.com SRV
+```
 
