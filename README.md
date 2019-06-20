@@ -16,8 +16,7 @@ dns server
 https://github.com/vislee/lua-resty-dns-server
 
 ```
-wget https://raw.githubusercontent.com/vislee/lua-resty-dns-server/master/lib/resty/dns/server.lua \
- -O /usr/local/openresty-dns/lualib/resty/dns/server.lua
+opm get vislee/lua-resty-dns-server
 ```
 
 ## install lua-resty-mlcache
@@ -72,6 +71,22 @@ stream {
         })
 
         _G.cache = cache
+
+        local DNSTYPES = {}
+
+        DNSTYPES[1]   = "A"
+        DNSTYPES[2]   = "NS"
+        DNSTYPES[5]   = "CNAME"
+        DNSTYPES[6]   = "SOA"
+        DNSTYPES[12]  = "PTR"
+        DNSTYPES[15]  = "MX"
+        DNSTYPES[16]  = "TXT"
+        DNSTYPES[28]  = "AAAA"
+        DNSTYPES[33]  = "SRV"
+        DNSTYPES[99]  = "SPF"
+        DNSTYPES[255] = "ANY"
+
+        _G.DNSTYPES = DNSTYPES
     }
 
     server {

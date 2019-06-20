@@ -39,7 +39,7 @@ local function redisconnect()
     return red, _
 end
 
-local function cache_exist( key )
+local function redis_exist_key( key )   -- redis_exist_key
 
     local red , err = redisconnect()
     local ver, err = red:exists(key)
@@ -48,14 +48,14 @@ local function cache_exist( key )
 end
 
 
-local function existsdns( key )
+local function dns_exist_key( key )     -- dns_exist_key
 
-    local value, err = cache:get("_exist_" .. key, nil, cache_exist, key)
+    local value, err = cache:get("_exist_" .. key, nil, redis_exist_key, key)
     return value
 
 end
 
-local function cache_dns( key )
+local function redis_get_key( key )     -- redis_get_key
 
     local red , err = redisconnect()
     local ver, err = red:smembers(key)
@@ -63,9 +63,9 @@ local function cache_dns( key )
 
 end
 
-local function getdns( prefix, key )
+local function dns_get_key( prefix, key )       -- dns_get_key
 
-    local value, err = cache:get(prefix .. key, nil, cache_dns, key)
+    local value, err = cache:get(prefix .. key, nil, redis_get_key, key)
     return cjson.decode(value), _
 
 end
@@ -146,14 +146,12 @@ if not err then
 end
 
 
-
-
 local function _cname( prefix, key )
     -- CNAME
-    --     tld|sub|view|type   value|ttl    set
+    --     tld|sub|view|type   value|ttl
     -- sadd aikaiyuan.com|www|*|CNAME   aikaiyuan.appchizi.com.|3600
 
-    local redis_value = getdns(prefix, key)
+    local redis_value = dns_get_key(prefix, key)
     ngx.log(ngx.DEBUG, "TYPE_", prefix, " key: ", key)
 
     for index, data in ipairs(redis_value) do
@@ -164,6 +162,7 @@ local function _cname( prefix, key )
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
 
+        -- create_cname_answer(self, name, ttl, cname)
         dns:create_cname_answer(query.qname, ttl, value)
     end
 
@@ -171,10 +170,10 @@ end
 
 local function _a( prefix, key )
     -- A
-    --     tld|sub|view|type   value|ttl   set
+    --     tld|sub|view|type   value|ttl
     -- sadd aikaiyuan.com|lb|*|A 220.181.136.165|3600 220.181.136.166|3600
 
-    local redis_value = getdns(prefix, key)
+    local redis_value = dns_get_key(prefix, key)
     ngx.log(ngx.DEBUG, "TYPE_", prefix, " key: ", key)
 
     for index, data in ipairs(redis_value) do
@@ -185,6 +184,7 @@ local function _a( prefix, key )
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
 
+        -- create_a_answer(self, name, ttl, ipv4)
         dns:create_a_answer(query.qname, ttl, value)
     end
 
@@ -192,10 +192,10 @@ end
 
 local function _aaaa( prefix, key )
     -- AAAA
-    --     tld|sub|view|type   value|ttl   set
+    --     tld|sub|view|type   value|ttl
     -- sadd aikaiyuan.com|ipv6|*|AAAA 2400:89c0:1022:657::152:150|86400 2400:89c0:1032:157::31:1201|86400
 
-    local redis_value = getdns(prefix, key)
+    local redis_value = dns_get_key(prefix, key)
     ngx.log(ngx.DEBUG, "TYPE_", prefix, " key: ", key)
 
     for index, data in ipairs(redis_value) do
@@ -206,6 +206,7 @@ local function _aaaa( prefix, key )
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
 
+        -- create_aaaa_answer(self, name, ttl, ipv6)
         dns:create_aaaa_answer(query.qname, ttl, value)
     end
 
@@ -213,10 +214,10 @@ end
 
 local function _mx( prefix, key )
     -- MX
-    --     tld|sub|view|type   value|ttl|preference   set
+    --     tld|sub|view|type   value|ttl|preference
     -- sadd aikaiyuan.com|@|*|MX smtp1.qq.com.|720|10 smtp2.qq.com.|720|10
 
-    local redis_value = getdns(prefix, key)
+    local redis_value = dns_get_key(prefix, key)
     ngx.log(ngx.DEBUG, "TYPE_", prefix, " key: ", key)
 
     for index, data in ipairs(redis_value) do
@@ -229,6 +230,7 @@ local function _mx( prefix, key )
 
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl, " preference: ", preference)
 
+        -- create_mx_answer(self, name, ttl, preference, exchange)
         dns:create_mx_answer(query.qname, ttl, preference, value)
     end
 
@@ -239,7 +241,7 @@ local function _txt( prefix, key )
     --     tld|sub|view|type   value|ttl
     -- sadd aikaiyuan.com|txt|*|TXT txt.aikaiyuan.com|1200
 
-    local redis_value = getdns(prefix, key)
+    local redis_value = dns_get_key(prefix, key)
     ngx.log(ngx.DEBUG, "TYPE_", prefix, " key: ", key)
 
     for index, data in ipairs(redis_value) do
@@ -250,6 +252,7 @@ local function _txt( prefix, key )
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
 
+        -- create_txt_answer(self, name, ttl, txt)
         dns:create_txt_answer(query.qname, ttl, value)
     end
 
@@ -260,7 +263,7 @@ local function _ns( prefix, key )
     --     tld|sub|view|type   value|ttl
     -- sadd aikaiyuan.com|ns|*|NS ns10.aikaiyuan.com.|86400
 
-    local redis_value = getdns(prefix, key)
+    local redis_value = dns_get_key(prefix, key)
     ngx.log(ngx.DEBUG, "TYPE_", prefix, " key: ", key)
 
     for index, data in ipairs(redis_value) do
@@ -271,17 +274,37 @@ local function _ns( prefix, key )
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
 
+        -- create_ns_answer(self, name, ttl, nsdname)
         dns:create_ns_answer(query.qname, ttl, value)
     end
 
 end
 
 local function _srv( prefix, key )
-    -- TODO
+    -- SRV
+    --     tld|sub|view|type   priority|weight|port|value|ttl
+    -- sadd aikaiyuan.com|srv|*|SRV 1|100|800|www.aikaiyuan.com|120
 
-    local redis_value = getdns(prefix, key)
+    local redis_value = dns_get_key(prefix, key)
+    ngx.log(ngx.DEBUG, "TYPE_", prefix, " key: ", key)
 
-    dns:create_srv_answer(query.qname, "86400", "100", "100", "80", "www.aikaiyuan.com")
+    for index, data in ipairs(redis_value) do
+        ngx.log(ngx.DEBUG, "index: ", index, " data: ", data)
+
+        local info     = split(data, '|')
+        local priority = info[1]
+        local weight   = info[2]
+        local port     = info[3]
+        local value    = info[4]
+        local ttl      = info[5]
+        ngx.log(ngx.DEBUG, "priority: ", priority, " weight: ", weight, 
+                " port: ", port, " value: ", value,  
+                " ttl: ", ttl
+        )
+
+        -- create_srv_answer(self, name, ttl, priority, weight, port, target)
+        dns:create_srv_answer(query.qname, ttl, priority, weight, port, value)
+    end
 
 end
 
@@ -298,7 +321,7 @@ local function issub( sub, tld, view, types )
             local x_sub = table.concat(new_sub,".", k )
 
             local key = tld .. "|" .. x_sub .. "|" .. view .. "|" .. types
-            local testkey = existsdns(key)
+            local testkey = dns_exist_key(key)
             if testkey == 1 then
                 return key, 1
             end
@@ -319,12 +342,12 @@ local function result()
 
 end
 
-if query.qtype == server.TYPE_CNAME then
+local function cname()
 
     local key = tld .. "|" .. sub .. "|" .. view .. "|"
     local dnstyep = "CNAME"
 
-    local testkey = existsdns(key .. dnstyep)
+    local testkey = dns_exist_key(key .. dnstyep)
     if testkey == 1 then
         local res = _cname(dnstyep, key .. dnstyep)
         return result()
@@ -338,12 +361,14 @@ if query.qtype == server.TYPE_CNAME then
 
     return result()
 
-elseif query.qtype == server.TYPE_A then
+end
+
+local function a()
 
     local key = tld .. "|" .. sub .. "|" .. view .. "|"
     local dnstyep = "A"
 
-    local testkey = existsdns(key .. dnstyep)
+    local testkey = dns_exist_key(key .. dnstyep)
     if testkey == 1 then
         local res = _a(dnstyep, key .. dnstyep)
         return result()
@@ -357,7 +382,7 @@ elseif query.qtype == server.TYPE_A then
 
     local dnstyep = "CNAME"
 
-    local testkey = existsdns(key .. dnstyep)
+    local testkey = dns_exist_key(key .. dnstyep)
     if testkey == 1 then
         local res = _cname(dnstyep, key .. dnstyep)
         return result()
@@ -371,12 +396,14 @@ elseif query.qtype == server.TYPE_A then
 
     return result()
 
-elseif  query.qtype == server.TYPE_AAAA then
+end
+
+local function aaaa()
 
     local key = tld .. "|" .. sub .. "|" .. view .. "|"
     local dnstyep = "AAAA"
 
-    local testkey = existsdns(key .. dnstyep)
+    local testkey = dns_exist_key(key .. dnstyep)
     if testkey == 1 then
         local res = _aaaa(dnstyep, key .. dnstyep)
         return result()
@@ -390,12 +417,14 @@ elseif  query.qtype == server.TYPE_AAAA then
 
     return result()
 
-elseif  query.qtype == server.TYPE_MX then
+end
+
+local function mx()
 
     local key = tld .. "|" .. sub .. "|" .. view .. "|"
     local dnstyep = "MX"
 
-    local testkey = existsdns(key .. dnstyep)
+    local testkey = dns_exist_key(key .. dnstyep)
     if testkey == 1 then
         local res = _mx(dnstyep, key .. dnstyep)
         return result()
@@ -409,12 +438,14 @@ elseif  query.qtype == server.TYPE_MX then
 
     return result()
 
-elseif  query.qtype == server.TYPE_TXT then
+end
+
+local function txt()
 
     local key = tld .. "|" .. sub .. "|" .. view .. "|"
     local dnstyep = "TXT"
 
-    local testkey = existsdns(key .. dnstyep)
+    local testkey = dns_exist_key(key .. dnstyep)
     if testkey == 1 then
         local res = _txt(dnstyep, key .. dnstyep)
         return result()
@@ -428,12 +459,14 @@ elseif  query.qtype == server.TYPE_TXT then
 
     return result()
 
-elseif  query.qtype == server.TYPE_NS then
+end
+
+local function ns()
 
     local key = tld .. "|" .. sub .. "|" .. view .. "|"
     local dnstyep = "NS"
 
-    local testkey = existsdns(key .. dnstyep)
+    local testkey = dns_exist_key(key .. dnstyep)
     if testkey == 1 then
         local res = _ns(dnstyep, key .. dnstyep)
         return result()
@@ -447,20 +480,62 @@ elseif  query.qtype == server.TYPE_NS then
 
     return result()
 
-elseif  query.qtype == server.TYPE_SRV then
-    -- TODO
+end
+
+local function srv()
 
     local key = tld .. "|" .. sub .. "|" .. view .. "|"
-    local res = _srv("SRV", key)
+    local dnstyep = "SRV"
 
-    return result()
+    local testkey = dns_exist_key(key .. dnstyep)
+    if testkey == 1 then
+        local res = _srv(dnstyep, key .. dnstyep)
+        return result()
+    end
 
-else
-
-    dns:create_soa_answer(tld, 600, "ns1.aikaiyuan.com.", "domain.aikaiyuan.com.", 1558348800, 1800, 900, 604800, 86400)
     return result()
 
 end
+
+local function ptr()
+    -- TODO
+end
+
+local function spf()
+    -- TODO
+end
+
+local function any()
+    -- TODO
+end
+
+local function soa()
+
+    dns:create_soa_answer(tld, 600, "ns1.aikaiyuan.com.", "domain.aikaiyuan.com.",
+                          1558348800, 1800, 900, 604800, 86400)
+    return result()
+
+end
+
+local main = {
+    A     = function() return a()     end,  -- ok
+    NS    = function() return ns()    end,  -- ok
+    CNAME = function() return cname() end,  -- ok
+    SOA   = function() return soa()   end,  -- ok
+    PTR   = function() return ptr()   end,  -- ok
+    MX    = function() return mx()    end,  -- ok
+    TXT   = function() return txt()   end,  -- ok
+    AAAA  = function() return aaaa()  end,  -- ok
+    SRV   = function() return srv()   end,  -- ok
+    SPF   = function() return spf()   end,  -- ok
+    ANY   = function() return any()   end,  -- ok
+}
+
+main[
+    _G.DNSTYPES[query.qtype]
+    or
+    _G.DNSTYPES[6] -- to SOA
+]()
 
 
 
