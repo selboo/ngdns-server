@@ -146,7 +146,7 @@ if not err then
 end
 
 
-local function _cname( prefix, key )
+local function _cname( key, prefix )
     -- CNAME
     --     tld|sub|view|type   value|ttl
     -- sadd aikaiyuan.com|www|*|CNAME   aikaiyuan.appchizi.com.|3600
@@ -168,7 +168,7 @@ local function _cname( prefix, key )
 
 end
 
-local function _a( prefix, key )
+local function _a( key, prefix )
     -- A
     --     tld|sub|view|type   value|ttl
     -- sadd aikaiyuan.com|lb|*|A 220.181.136.165|3600 220.181.136.166|3600
@@ -190,7 +190,7 @@ local function _a( prefix, key )
 
 end
 
-local function _aaaa( prefix, key )
+local function _aaaa( key, prefix )
     -- AAAA
     --     tld|sub|view|type   value|ttl
     -- sadd aikaiyuan.com|ipv6|*|AAAA 2400:89c0:1022:657::152:150|86400 2400:89c0:1032:157::31:1201|86400
@@ -212,7 +212,7 @@ local function _aaaa( prefix, key )
 
 end
 
-local function _mx( prefix, key )
+local function _mx( key, prefix )
     -- MX
     --     tld|sub|view|type   value|ttl|preference
     -- sadd aikaiyuan.com|@|*|MX smtp1.qq.com.|720|10 smtp2.qq.com.|720|10
@@ -236,7 +236,7 @@ local function _mx( prefix, key )
 
 end
 
-local function _txt( prefix, key )
+local function _txt( key, prefix )
     -- TXT
     --     tld|sub|view|type   value|ttl
     -- sadd aikaiyuan.com|txt|*|TXT txt.aikaiyuan.com|1200
@@ -258,7 +258,7 @@ local function _txt( prefix, key )
 
 end
 
-local function _ns( prefix, key )
+local function _ns( key, prefix )
     -- NS
     --     tld|sub|view|type   value|ttl
     -- sadd aikaiyuan.com|ns|*|NS ns10.aikaiyuan.com.|86400
@@ -280,7 +280,7 @@ local function _ns( prefix, key )
 
 end
 
-local function _srv( prefix, key )
+local function _srv( key, prefix )
     -- SRV
     --     tld|sub|view|type   priority|weight|port|value|ttl
     -- sadd aikaiyuan.com|srv|*|SRV 1|100|800|www.aikaiyuan.com|120
@@ -308,23 +308,22 @@ local function _srv( prefix, key )
 
 end
 
-local function findsub( sub, tld, view, types )
+local function findsub( key )
 
-    local new_sub = split(sub, "\\.")
-    local key = tld .. "|" .. sub .. "|" .. view .. "|" .. types
-
+    local new_sub = split(key[2], "\\.")
     if #new_sub == 1 then
         return key, 0
-    else
-        for k, v in ipairs(new_sub) do
-            new_sub[k] = "*"
-            local x_sub = table.concat(new_sub,".", k )
+    end
 
-            local key = tld .. "|" .. x_sub .. "|" .. view .. "|" .. types
-            local testkey = dns_exist_key(key)
-            if testkey == 1 then
-                return key, 1
-            end
+    for k, v in ipairs(new_sub) do
+        new_sub[k] = "*"
+        local x_sub = table.concat(new_sub, ".", k)
+
+        key[2] = x_sub
+        local new_key = table.concat(key, "|")
+
+        if dns_exist_key(new_key) == 1 then
+            return new_key, 1
         end
     end
 
@@ -342,20 +341,19 @@ local function result()
 
 end
 
-local function cname()
+local function cname( k, t )
 
-    local key = tld .. "|" .. sub .. "|" .. view .. "|"
-    local dnstyep = "CNAME"
+    table.insert(k, t)
+    local key = table.concat(k, "|")
 
-    local testkey = dns_exist_key(key .. dnstyep)
-    if testkey == 1 then
-        local res = _cname(dnstyep, key .. dnstyep)
+    if dns_exist_key(key) == 1 then
+        local res = _cname(key, t)
         return result()
     end
 
-    local new_key, num = findsub(sub, tld, view, dnstyep)
+    local new_key, num = findsub(k)
     if num == 1 then
-        local res = _cname(dnstyep, new_key)
+        local res = _cname(new_key, t)
         return result()
     end
 
@@ -363,41 +361,40 @@ local function cname()
 
 end
 
-local function a()
+local function a( k, t )
 
-    local key = tld .. "|" .. sub .. "|" .. view .. "|"
-    local dnstyep = "A"
+    table.insert(k, t)
+    local key = table.concat(k, "|")
 
-    local testkey = dns_exist_key(key .. dnstyep)
-    if testkey == 1 then
-        local res = _a(dnstyep, key .. dnstyep)
+    if dns_exist_key(key) == 1 then
+        local res = _a(key, t)
         return result()
     end
 
-    local new_key, num = findsub(sub, tld, view, dnstyep)
+    local new_key, num = findsub(k)
     if num == 1 then
-        local res = _a(dnstyep, new_key)
+        local res = _a(new_key, t)
         return result()
     end
 
-    return cname()
+    table.remove(k)
+    return cname(k, "CNAME")
 
 end
 
-local function aaaa()
+local function aaaa( k, t )
 
-    local key = tld .. "|" .. sub .. "|" .. view .. "|"
-    local dnstyep = "AAAA"
+    table.insert(k, t)
+    local key = table.concat(k, "|")
 
-    local testkey = dns_exist_key(key .. dnstyep)
-    if testkey == 1 then
-        local res = _aaaa(dnstyep, key .. dnstyep)
+    if dns_exist_key(key) == 1 then
+        local res = _aaaa(key, t)
         return result()
     end
 
-    local new_key, num = findsub(sub, tld, view, dnstyep)
+    local new_key, num = findsub(k)
     if num == 1 then
-        local res = _aaaa(dnstyep, new_key)
+        local res = _aaaa(new_key, t)
         return result()
     end
 
@@ -405,20 +402,19 @@ local function aaaa()
 
 end
 
-local function mx()
+local function mx( k, t )
 
-    local key = tld .. "|" .. sub .. "|" .. view .. "|"
-    local dnstyep = "MX"
+    table.insert(k, t)
+    local key = table.concat(k, "|")
 
-    local testkey = dns_exist_key(key .. dnstyep)
-    if testkey == 1 then
-        local res = _mx(dnstyep, key .. dnstyep)
+    if dns_exist_key(key) == 1 then
+        local res = _mx(key, t)
         return result()
     end
 
-    local new_key, num = findsub(sub, tld, view, dnstyep)
+    local new_key, num = findsub(k)
     if num == 1 then
-        local res = _mx(dnstyep, new_key)
+        local res = _mx(new_key, t)
         return result()
     end
 
@@ -426,20 +422,19 @@ local function mx()
 
 end
 
-local function txt()
+local function txt( k, t )
 
-    local key = tld .. "|" .. sub .. "|" .. view .. "|"
-    local dnstyep = "TXT"
+    table.insert(k, t)
+    local key = table.concat(k, "|")
 
-    local testkey = dns_exist_key(key .. dnstyep)
-    if testkey == 1 then
-        local res = _txt(dnstyep, key .. dnstyep)
+    if dns_exist_key(key) == 1 then
+        local res = _txt(key, t)
         return result()
     end
 
-    local new_key, num = findsub(sub, tld, view, dnstyep)
+    local new_key, num = findsub(k)
     if num == 1 then
-        local res = _txt(dnstyep, new_key)
+        local res = _txt(new_key, t)
         return result()
     end
 
@@ -447,20 +442,19 @@ local function txt()
 
 end
 
-local function ns()
+local function ns( k, t )
 
-    local key = tld .. "|" .. sub .. "|" .. view .. "|"
-    local dnstyep = "NS"
+    table.insert(k, t)
+    local key = table.concat(k, "|")
 
-    local testkey = dns_exist_key(key .. dnstyep)
-    if testkey == 1 then
-        local res = _ns(dnstyep, key .. dnstyep)
+    if dns_exist_key(key) == 1 then
+        local res = _ns(key, t)
         return result()
     end
 
-    local new_key, num = findsub(sub, tld, view, dnstyep)
+    local new_key, num = findsub(k)
     if num == 1 then
-        local res = _ns(dnstyep, new_key)
+        local res = _ns(new_key, t)
         return result()
     end
 
@@ -468,14 +462,13 @@ local function ns()
 
 end
 
-local function srv()
+local function srv( k, t )
 
-    local key = tld .. "|" .. sub .. "|" .. view .. "|"
-    local dnstyep = "SRV"
+    table.insert(k, t)
+    local key = table.concat(k, "|")
 
-    local testkey = dns_exist_key(key .. dnstyep)
-    if testkey == 1 then
-        local res = _srv(dnstyep, key .. dnstyep)
+    if dns_exist_key(key) == 1 then
+        local res = _srv(key, t)
         return result()
     end
 
@@ -483,25 +476,25 @@ local function srv()
 
 end
 
-local function ptr()
+local function ptr( k, t )
     -- TODO
 end
 
-local function spf()
+local function spf( k, t )
     -- TODO
 end
 
-local function any()
+local function any( k, t )
 
-    local key = tld .. "|" .. sub .. "|" .. view .. "|"
+    local key = table.concat(k, "|")
 
-    _a("A", key .. "A")
-    _cname("CNAME", key .. "CNAME")
-    _srv("SRV", key .. "SRV")
-    _ns("NS", key .. "NS")
-    _mx("MX", key .. "MX")
-    _txt("TXT", key .. "TXT")
-    _aaaa("AAAA", key .. "AAAA")
+    _a(key .. "|A", "A")
+    _cname(key .. "|CNAME", "CNAME")
+    _srv(key .. "|SRV", "SRV")
+    _ns(key .. "|NS", "NS")
+    _mx(key .. "|MX", "MX")
+    _txt(key .. "|TXT", "TXT")
+    _aaaa(key .. "|AAAA", "AAAA")
 
     return result()
 end
@@ -515,24 +508,30 @@ local function soa()
 end
 
 local main = {
-    A     = function() return a()     end,  -- 1
-    NS    = function() return ns()    end,  -- 2
-    CNAME = function() return cname() end,  -- 5
-    SOA   = function() return soa()   end,  -- 6
-    PTR   = function() return ptr()   end,  -- 12
-    MX    = function() return mx()    end,  -- 15
-    TXT   = function() return txt()   end,  -- 16
-    AAAA  = function() return aaaa()  end,  -- 28
-    SRV   = function() return srv()   end,  -- 33
-    SPF   = function() return spf()   end,  -- 99
-    ANY   = function() return any()   end,  -- 255
+    A     = function(k, t) return a(k, t)        end,  -- 1
+    NS    = function(k, t) return ns(k, t)       end,  -- 2
+    CNAME = function(k, t) return cname(k, t)    end,  -- 5
+    SOA   = function(k, t) return soa(k, t)      end,  -- 6
+    PTR   = function(k, t) return ptr(k, t)      end,  -- 12
+    MX    = function(k, t) return mx(k, t)       end,  -- 15
+    TXT   = function(k, t) return txt(k, t)      end,  -- 16
+    AAAA  = function(k, t) return aaaa(k, t)     end,  -- 28
+    SRV   = function(k, t) return srv(k, t)      end,  -- 33
+    SPF   = function(k, t) return spf(k, t)      end,  -- 99
+    ANY   = function(k, t) return any(k, t)      end,  -- 255
+}
+
+local key = {
+    tld,
+    sub,
+    view
 }
 
 main[
     _G.DNSTYPES[query.qtype]
     or
     _G.DNSTYPES[6] -- to SOA
-]()
+](key, _G.DNSTYPES[query.qtype])
 
 
 
