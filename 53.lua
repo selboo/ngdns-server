@@ -6,6 +6,7 @@ local DEBUG = false
 local gsub   = string.gsub
 local ssub   = string.sub
 local strlen = string.len
+local strsub = string.sub
 local find   = ngx.re.find
 
 local server = require 'resty.dns.server'
@@ -190,6 +191,24 @@ local function _a( key, prefix )
 
 end
 
+local function _full_aaaa(ipv6)
+    local n = 0
+    local m = {":"}
+
+    for i = 1, strlen(ipv6) do
+        local s = strsub(ipv6,i,i)
+        if s == ":" then
+            n = n + 1
+        end
+    end
+
+    for i = 1, 8 - n do
+        table.insert(m, ":")
+    end
+
+    return gsub(ipv6, "::", table.concat(m, "0"))
+end
+
 local function _aaaa( key, prefix )
     -- AAAA
     --     tld|sub|view|type   value|ttl
@@ -203,6 +222,9 @@ local function _aaaa( key, prefix )
 
         local info  = split(data, '|')
         local value = info[1]
+        if find(value, '::') then
+            value = _full_aaaa(value)
+        end
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
 
