@@ -91,7 +91,30 @@ stream {
 
     server {
         listen 53 udp ;
+
         content_by_lua_file conf/53.lua;
+
+        log_by_lua_block {
+
+            local logger = require "resty.logger.socket"
+            if not logger.initted() then
+                local ok, err = logger.init{
+                    host = '127.0.0.1',
+                    port = 514,
+                    sock_type = "udp",
+                    flush_limit = 1,
+                    drop_limit = 99999,
+                }
+                if not ok then
+                    ngx.log(ngx.ERR, "failed to initialize the logger: ", err)
+                    return
+                end
+            end
+
+            logger.log(ngx.ctx.log)
+
+        }
+
     }
 
 
@@ -104,6 +127,16 @@ stream {
 # systemctl restart redis
 # /usr/local/openresty-dns/nginx/sbin/nginx
 ```
+
+## dns query log
+
+```
+2019-06-25 15:59:51 127.0.0.1 lb.aikaiyuan.com aikaiyuan.com lb * A aikaiyuan.com|lb|*|A
+2019-06-25 15:59:51 127.0.0.1 lb.aikaiyuan.com aikaiyuan.com lb * A aikaiyuan.com|lb|*|A
+```
+
+> time client_ip domain tld sub view qtype redis_key
+
 
 ## dns type
 

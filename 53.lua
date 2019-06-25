@@ -21,7 +21,6 @@ red:set_timeout(3000)
 
 local request_remote_addr = ngx.var.remote_addr
 
-
 local function split(s, p)
 
     local r = {}
@@ -351,10 +350,25 @@ local function findsub( key )
     return key, 0
 end
 
-local function result()
+local function result( key, t )
     -- return dns
     local resp = dns:encode_response()
     local ok, err = sock:send(resp)
+
+    -- time client_ip domain tld sub view qtype redis_key
+    local log = {
+        os.date("%Y-%m-%d %H:%M:%S", os.time()),
+        request_remote_addr,
+        query.qname,
+        tld,
+        sub,
+        view,
+        t or "_",
+        key or "_"
+    }
+    ngx.ctx.log = table.concat(log, " ")
+    ngx.log(ngx.DEBUG, "query log: ", ngx.ctx.log)
+
     if not ok then
         ngx.log(ngx.ERR, "failed to send: ", err)
         return
@@ -369,13 +383,13 @@ local function cname( k, t )
 
     if dns_exist_key(key) == 1 then
         local res = _cname(key, t)
-        return result()
+        return result(key, t)
     end
 
-    local new_key, num = findsub(k)
+    local key, num = findsub(k)
     if num == 1 then
-        local res = _cname(new_key, t)
-        return result()
+        local res = _cname(key, t)
+        return result(key, t)
     end
 
     return result()
@@ -389,13 +403,13 @@ local function a( k, t )
 
     if dns_exist_key(key) == 1 then
         local res = _a(key, t)
-        return result()
+        return result(key, t)
     end
 
-    local new_key, num = findsub(k)
+    local key, num = findsub(k)
     if num == 1 then
-        local res = _a(new_key, t)
-        return result()
+        local res = _a(key, t)
+        return result(key, t)
     end
 
     table.remove(k)
@@ -410,13 +424,13 @@ local function aaaa( k, t )
 
     if dns_exist_key(key) == 1 then
         local res = _aaaa(key, t)
-        return result()
+        return result(key, t)
     end
 
-    local new_key, num = findsub(k)
+    local key, num = findsub(k)
     if num == 1 then
-        local res = _aaaa(new_key, t)
-        return result()
+        local res = _aaaa(key, t)
+        return result(key, t)
     end
 
     return result()
@@ -430,13 +444,13 @@ local function mx( k, t )
 
     if dns_exist_key(key) == 1 then
         local res = _mx(key, t)
-        return result()
+        return result(key, t)
     end
 
-    local new_key, num = findsub(k)
+    local key, num = findsub(k)
     if num == 1 then
-        local res = _mx(new_key, t)
-        return result()
+        local res = _mx(key, t)
+        return result(key, t)
     end
 
     return result()
@@ -450,13 +464,13 @@ local function txt( k, t )
 
     if dns_exist_key(key) == 1 then
         local res = _txt(key, t)
-        return result()
+        return result(key, t)
     end
 
-    local new_key, num = findsub(k)
+    local key, num = findsub(k)
     if num == 1 then
-        local res = _txt(new_key, t)
-        return result()
+        local res = _txt(key, t)
+        return result(key, t)
     end
 
     return result()
@@ -470,13 +484,13 @@ local function ns( k, t )
 
     if dns_exist_key(key) == 1 then
         local res = _ns(key, t)
-        return result()
+        return result(key, t)
     end
 
-    local new_key, num = findsub(k)
+    local key, num = findsub(k)
     if num == 1 then
-        local res = _ns(new_key, t)
-        return result()
+        local res = _ns(key, t)
+        return result(key, t)
     end
 
     return result()
@@ -490,7 +504,7 @@ local function srv( k, t )
 
     if dns_exist_key(key) == 1 then
         local res = _srv(key, t)
-        return result()
+        return result(key, t)
     end
 
     return result()
@@ -517,7 +531,8 @@ local function any( k, t )
     _txt(key .. "|TXT", "TXT")
     _aaaa(key .. "|AAAA", "AAAA")
 
-    return result()
+    return result(key, "ANY")
+
 end
 
 local function soa()
