@@ -72,6 +72,7 @@ local function dns_get_key( prefix, key )       -- dns_get_key
 end
 
 local function init()
+
     if not sock then
         ngx.log(ngx.ERR, "failed to get the request socket: ", err)
         return ngx.exit(ngx.ERROR)
@@ -84,9 +85,11 @@ local function init()
     end
 
     return req
+
 end
 
 local function dnsserver(req)
+
     local request, err = dns:decode_request(req)
 
     if not request then
@@ -129,6 +132,7 @@ local function sub_tld(request)
     end
 
     return query, sub, tld, _
+
 end
 
 local function ip_to_isp ( ip )
@@ -192,21 +196,16 @@ local function _a( key, prefix )
 end
 
 local function _full_aaaa(ipv6)
-    local n = 0
+
     local m = {":"}
+    local n = split(ipv6, ':')
 
-    for i = 1, strlen(ipv6) do
-        local s = strsub(ipv6,i,i)
-        if s == ":" then
-            n = n + 1
-        end
-    end
-
-    for i = 1, 8 - n do
+    for i = 1, 8 - #n do
         table.insert(m, ":")
     end
 
     return gsub(ipv6, "::", table.concat(m, "0"))
+
 end
 
 local function _aaaa( key, prefix )
