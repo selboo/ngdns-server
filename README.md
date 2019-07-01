@@ -1,16 +1,17 @@
-# ng-dns-server
+# ngdns-server
 
-基于 OpenResty lua-resty-dns-server dns server
+ * 基于 OpenResty lua-resty-dns-server dns server
 
-支持 A, AAAA, CNAME, NS, TXT, MX, SRV
+ * 支持 A, AAAA, CNAME, NS, TXT, MX, SRV
 
-支持 区域解析 [ngx_stream_ipdb_module](https://github.com/vislee/ngx_stream_ipdb_module) [qqwry.ipdb](https://github.com/metowolf/qqwry.ipdb)
+ * 支持 区域解析 [ngx_stream_ipdb_module](https://github.com/vislee/ngx_stream_ipdb_module), IP地址库: [qqwry.ipdb](https://github.com/metowolf/qqwry.ipdb)
 
 ## install openresty
 
 ```
 # git clone https://github.com/vislee/ngx_stream_ipdb_module.git
 # wget https://openresty.org/download/openresty-1.15.8.1.tar.gz
+# tar zxvf openresty-1.15.8.1.tar.gz
 # cd openresty-1.15.8.1
 # ./configure --prefix=/usr/local/openresty-dns/ --add-module=../ngx_stream_ipdb_module/
 # gmake -j
@@ -105,7 +106,6 @@ stream {
 
         _G.DNSTYPES = DNSTYPES
 
-        # 
         local views = {
             电信    = "DX",
             联通    = "LT",
@@ -178,9 +178,9 @@ stream {
 ```
 ## tld|sub|view|type   value|ttl   set
 # redis-cli
-127.0.0.1:6379> sadd aikaiyuan.com|lb|*|A 220.181.136.165|3600 220.181.136.166|3600
+127.0.0.1:6379> sadd aikaiyuan.com|lb|*|A 220.181.136.165|3600 220.181.136.166|3600 # 默认区域
 OK
-127.0.0.1:6379> sadd aikaiyuan.com|lb|LT|A 123.125.23.1|3600
+127.0.0.1:6379> sadd aikaiyuan.com|lb|LT|A 123.125.23.1|3600 # 联通区域
 OK
 # dig @127.0.0.1 lb.aikaiyuan.com
 ```
@@ -190,9 +190,9 @@ OK
 ```
 ## tld|sub|view|type   value|ttl    set
 # redis-cli
-127.0.0.1:6379> sadd aikaiyuan.com|www|*|CNAME   aikaiyuan.appchizi.com.|3600
+127.0.0.1:6379> sadd aikaiyuan.com|www|*|CNAME   aikaiyuan.appchizi.com.|3600  # 默认区域
 OK
-127.0.0.1:6379> sadd aikaiyuan.com|www|DX|CNAME   dx.appchizi.com.|60
+127.0.0.1:6379> sadd aikaiyuan.com|www|DX|CNAME   dx.appchizi.com.|60  # 电信区域
 OK
 # dig @127.0.0.1 www.aikaiyuan.com CNAME
 ```
@@ -249,9 +249,9 @@ OK
 
 # Thinks
 
-https://github.com/vislee/lua-resty-dns-server
-https://github.com/vislee/ngx_stream_ipdb_module
-https://github.com/metowolf/qqwry.ipdb
-https://github.com/thibaultcha/lua-resty-mlcache
-https://github.com/cloudflare/lua-resty-logger-socket
+ * https://github.com/vislee/lua-resty-dns-server
+ * https://github.com/vislee/ngx_stream_ipdb_module
+ * https://github.com/metowolf/qqwry.ipdb
+ * https://github.com/thibaultcha/lua-resty-mlcache
+ * https://github.com/cloudflare/lua-resty-logger-socket
 
