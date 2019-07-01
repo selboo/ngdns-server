@@ -30,6 +30,7 @@ local function split(s, p)
 end
 
 local function redisconnect()
+
     local ok, err = red:connect("127.0.0.1", 6379)
     if not ok then
         ngx.log(ngx.ERR, "1003 connect 127.0.0.1:6379 redis fail: ", err)
@@ -47,11 +48,22 @@ local function redis_exist_key( key )   -- redis_exist_key
 
 end
 
+local function dns_exist_key( k )     -- dns_exist_key
 
-local function dns_exist_key( key )     -- dns_exist_key
-
+    local view_tmp = k[3]
+    local key = table.concat(k, "|")
     local value, err = cache:get("_exist_" .. key, nil, redis_exist_key, key)
-    return value
+
+    if value == 1 then
+        return key, value
+    else
+        k[3] = "*"
+        local key = table.concat(k, "|")
+        local value, err = cache:get("_exist_" .. key, nil, redis_exist_key, key)
+        k[3] = view_tmp
+
+        return key, value
+    end
 
 end
 
@@ -135,8 +147,9 @@ local function sub_tld(request)
 end
 
 local function ip_to_isp ( ip )
-    -- TODO
-    return "*"
+
+    return _G.VIEWS[ngx.var.ipdb_isp_domain] or "*"
+
 end
 
 local req = init()
@@ -340,14 +353,15 @@ local function findsub( key )
         local x_sub = table.concat(new_sub, ".", k)
 
         key[2] = x_sub
-        local new_key = table.concat(key, "|")
 
-        if dns_exist_key(new_key) == 1 then
-            return new_key, 1
+        local new_key, num = dns_exist_key(key)
+        if num == 1 then
+            return new_key, num
         end
     end
 
     return key, 0
+
 end
 
 local function result( key, t )
@@ -379,9 +393,8 @@ end
 local function cname( k, t )
 
     table.insert(k, t)
-    local key = table.concat(k, "|")
-
-    if dns_exist_key(key) == 1 then
+    local key, num = dns_exist_key(k)
+    if num == 1 then
         local res = _cname(key, t)
         return result(key, t)
     end
@@ -396,12 +409,12 @@ local function cname( k, t )
 
 end
 
+
 local function a( k, t )
 
     table.insert(k, t)
-    local key = table.concat(k, "|")
-
-    if dns_exist_key(key) == 1 then
+    local key, num = dns_exist_key(k)
+    if num == 1 then
         local res = _a(key, t)
         return result(key, t)
     end
@@ -420,9 +433,8 @@ end
 local function aaaa( k, t )
 
     table.insert(k, t)
-    local key = table.concat(k, "|")
-
-    if dns_exist_key(key) == 1 then
+    local key, num = dns_exist_key(k)
+    if num == 1 then
         local res = _aaaa(key, t)
         return result(key, t)
     end
@@ -440,9 +452,8 @@ end
 local function mx( k, t )
 
     table.insert(k, t)
-    local key = table.concat(k, "|")
-
-    if dns_exist_key(key) == 1 then
+    local key, num = dns_exist_key(k)
+    if num == 1 then
         local res = _mx(key, t)
         return result(key, t)
     end
@@ -460,9 +471,8 @@ end
 local function txt( k, t )
 
     table.insert(k, t)
-    local key = table.concat(k, "|")
-
-    if dns_exist_key(key) == 1 then
+    local key, num = dns_exist_key(k)
+    if num == 1 then
         local res = _txt(key, t)
         return result(key, t)
     end
@@ -480,9 +490,8 @@ end
 local function ns( k, t )
 
     table.insert(k, t)
-    local key = table.concat(k, "|")
-
-    if dns_exist_key(key) == 1 then
+    local key, num = dns_exist_key(k)
+    if num == 1 then
         local res = _ns(key, t)
         return result(key, t)
     end
@@ -500,9 +509,8 @@ end
 local function srv( k, t )
 
     table.insert(k, t)
-    local key = table.concat(k, "|")
-
-    if dns_exist_key(key) == 1 then
+    local key, num = dns_exist_key(k)
+    if num == 1 then
         local res = _srv(key, t)
         return result(key, t)
     end
@@ -568,6 +576,7 @@ main[
     or
     _G.DNSTYPES[6] -- to SOA
 ](key, _G.DNSTYPES[query.qtype])
+
 
 
 
