@@ -148,7 +148,13 @@ end
 
 local function ip_to_isp ( ip )
 
-    return _G.VIEWS[ngx.var.ipdb_isp_domain] or "*"
+    if ngx.var.country_name == "中国" then
+        return _G.VIEWS[ngx.var.ipdb_isp_domain] or "*"
+    elseif ngx.var.region_name == "局域网" then
+        return "JYW"
+    else
+        return "HW"
+    end
 
 end
 
@@ -350,9 +356,7 @@ local function findsub( key )
 
     for k, v in ipairs(new_sub) do
         new_sub[k] = "*"
-        local x_sub = table.concat(new_sub, ".", k)
-
-        key[2] = x_sub
+        key[2] = table.concat(new_sub, ".", k)
 
         local new_key, num = dns_exist_key(key)
         if num == 1 then

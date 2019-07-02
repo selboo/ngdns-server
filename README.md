@@ -170,6 +170,24 @@ stream {
 
 > time client_ip domain tld sub view qtype redis_key
 
+## dns view type
+
+View | Code | Region |
+---- | ---- | ------ |
+电信    | DX | 中国    |
+远传电信 | DX | 中国    |
+广电网   | DX | 中国    |
+亚太电信 | DX | 中国    |
+中华电信 | DX | 中国    |
+联通    | LT | 中国    |
+移动    | YD | 中国    |
+教育网   | JY | 中国    |
+鹏博士   | PBS | 中国   |
+长城    | PBS | 中国    |
+海外    |  HW | 海外    |
+局域网   | JYW |       |
+
+数据来源: [http://www.cz88.net/ip/](http://www.cz88.net/ip/)
 
 ## dns type
 
