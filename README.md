@@ -265,6 +265,10 @@ OK
 # dig @127.0.0.1 srv.aikaiyuan.com SRV
 ```
 
+# TODO
+
+ * 支持 edns-client-subnet
+
 # Thinks
 
  * https://github.com/vislee/lua-resty-dns-server
