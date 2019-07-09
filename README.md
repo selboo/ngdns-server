@@ -267,7 +267,8 @@ OK
 
 # TODO
 
- * 支持 edns-client-subnet
+ * edns-client-subnet
+ * ngdns-api
 
 # Thinks
 
