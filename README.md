@@ -164,11 +164,11 @@ stream {
 ## dns query log
 
 ```
-2019-06-25 15:59:51 127.0.0.1 lb.aikaiyuan.com aikaiyuan.com lb * A aikaiyuan.com|lb|*|A
-2019-06-25 15:59:51 127.0.0.1 lb.aikaiyuan.com aikaiyuan.com lb * A aikaiyuan.com|lb|*|A
+2019-06-25 15:59:51 127.0.0.1 8.8.8.8 lb.aikaiyuan.com aikaiyuan.com lb * A aikaiyuan.com|lb|*|A
+2019-06-25 15:59:51 127.0.0.1 127.0.0.1 lb.aikaiyuan.com aikaiyuan.com lb * A aikaiyuan.com|lb|*|A
 ```
 
-> time client_ip domain tld sub view qtype redis_key
+> time client_ip subnet_ip domain tld sub view qtype redis_key
 
 ## dns view type
 

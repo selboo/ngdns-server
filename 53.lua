@@ -7,8 +7,10 @@ local gsub   = string.gsub
 local ssub   = string.sub
 local strlen = string.len
 local strsub = string.sub
+local strfind = string.find
 local find   = ngx.re.find
 
+local sipdb = require "ngx.stream.ipdb"
 local server = require 'resty.dns.server'
 local sock, err = ngx.req.socket()
 local dns = server:new()
@@ -29,6 +31,30 @@ local function split(s, p)
 
 end
 
+local function ipdb_split(msg)
+
+    local Table = {}
+    local fpat = "(.-)\t"
+    local last_end = 1
+    local s, e, cap = strfind(msg, fpat, 1)
+
+    while s do
+        if s ~= 1 or cap ~= "" then
+            table.insert(Table,cap)
+        end
+        last_end = e+1
+        s, e, cap = strfind(msg, fpat, last_end)
+    end
+
+    if last_end <= #msg + 1 then
+        cap = strsub(msg, last_end)
+        table.insert(Table, cap)
+    end
+
+    return Table
+
+end
+
 local function redisconnect()
 
     local ok, err = red:connect("127.0.0.1", 6379)
@@ -38,6 +64,7 @@ local function redisconnect()
     end
 
     return red, _
+
 end
 
 local function redis_exist_key( key )   -- redis_exist_key
@@ -122,10 +149,20 @@ end
 
 local function sub_tld(request)
 
-    local sub, tld = "", ""
+    local sub = ""
+    local tld = ""
     local query = request.questions[1]
+    local subnet = request.subnet[1]
 
-    ngx.log(ngx.DEBUG, "qname: ", query.qname, " qtype: ", query.qtype, " ngx.var.remote_addr: ", ngx.var.remote_addr)
+    local eip = subnet.address or request_remote_addr
+
+    ngx.log(ngx.DEBUG,
+        " qname: ", query.qname,
+        " qclass: ", query.qclass,
+        " qtype: ", query.qtype,
+        " ngx.var.remote_addr: ", request_remote_addr,
+        " subnet.ipaddr: ", eip
+    )
 
     local m, _, err = find(query.qname, ".[A-Za-z0-9--]*(.com|.cn|.net|.com.cn)", "jo")
     if m then
@@ -139,18 +176,33 @@ local function sub_tld(request)
         ngx.log(ngx.DEBUG, " sub: ", sub, " tld: ", tld)
     else
         ngx.log(ngx.DEBUG, "find error: ", err)
-        return query, sub, tld, err
+        return query, sub, tld, eip, err
     end
 
-    return query, sub, tld, _
+    return query, sub, tld, eip, _
 
 end
 
-local function ip_to_isp ( ip )
+local function ip_to_isp ( eip )
 
-    if ngx.var.country_name == "中国" then
-        return _G.VIEWS[ngx.var.ipdb_isp_domain] or "*"
-    elseif ngx.var.region_name == "局域网" then
+    local raw = sipdb.get_raw(eip)
+    local ipdb = ipdb_split(raw)
+
+    --[[
+    for index, data in ipairs(ipdb) do
+        ngx.log(ngx.DEBUG, "ipdb_split: sipdb.get_raw index: ", index, " data: ", data)
+    end
+    --]]
+
+    local country_name = ipdb[1]
+    local region_name  = ipdb[2]
+    -- local city_name    = ipdb[3]
+    -- local owner_domain = ipdb[4]
+    local isp_domain   = ipdb[5]
+
+    if country_name == "中国" then
+        return _G.VIEWS[isp_domain] or "*"
+    elseif region_name == "局域网" then
         return "JYW"
     else
         return "HW"
@@ -160,14 +212,13 @@ end
 
 local req = init()
 local request = dnsserver(req)
-local view = ip_to_isp(request_remote_addr)
-local query, sub, tld, err = sub_tld(request)
+local query, sub, tld, eip, err = sub_tld(request)
+local view = ip_to_isp(eip)
 
 if not err then
     ngx.log(ngx.DEBUG, "sub_tld: ", err)
     return 
 end
-
 
 local function _cname( key, prefix )
     -- CNAME
@@ -377,6 +428,7 @@ local function result( key, t )
     local log = {
         os.date("%Y-%m-%d %H:%M:%S", os.time()),
         request_remote_addr,
+        eip,
         query.qname,
         tld,
         sub,
