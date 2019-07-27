@@ -3,3 +3,5 @@ view.lua
 2953.lua
 3953.lua
 utils.lua
+server.lua
+check.sh

@@ -10,10 +10,13 @@
 
 ```
 # git clone https://github.com/vislee/ngx_stream_ipdb_module.git
+# cd ngx_stream_ipdb_module
+# git checkout add-lua-api
+# cd ..
 # wget https://openresty.org/download/openresty-1.15.8.1.tar.gz
 # tar zxvf openresty-1.15.8.1.tar.gz
 # cd openresty-1.15.8.1
-# ./configure --prefix=/usr/local/openresty-dns/ --add-module=../ngx_stream_ipdb_module/
+# ./configure --prefix=/usr/local/openresty-dns/ --with-stream --add-module=../ngx_stream_ipdb_module/ --with-cc-opt="-I $PWD/build/ngx_stream_lua*/src"
 # gmake -j
 # gmake install
 ```
@@ -89,6 +92,20 @@ stream {
         })
 
         _G.cache = cache
+
+        local tld = {
+            "aikaiyuan.com",
+            "selboo.com",
+            "abc.com"
+        }
+        local tlds = table.concat(tld, "|")
+
+        local zone = {
+            "(",
+            tlds,
+            ")$"
+        }
+        _G.zone = table.concat(zone)
 
         local DNSTYPES = {}
 
