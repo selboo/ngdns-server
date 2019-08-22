@@ -8,17 +8,16 @@ local redis  = require "resty.redis"
 local sipdb  = require "ngx.stream.ipdb"
 local server = require 'resty.dns.server'
 
-local gsub    = string.gsub
-local ssub    = string.sub
-local strlen  = string.len
-local strsub  = string.sub
-local strfind = string.find
-local strlower = string.lower
+local gsub    = string.gsub   -- no
+local ssub    = string.sub    -- yes
+local strlen  = string.len    -- yes
+local strfind = string.find   -- 2.1 partial Only fixed string searches (no patterns).
+local strlower = string.lower -- 2.1
 local find    = ngx.re.find
 
-local table_insert = table.insert
-local table_concat = table.concat
-local table_remove = table.remove
+local table_insert = table.insert   -- no
+local table_concat = table.concat   -- 2.1
+local table_remove = table.remove   -- 2.1
 
 
 local cjson_encode = cjson.encode
@@ -113,7 +112,7 @@ local function ipdb_split(msg)
     end
 
     if last_end <= #msg + 1 then
-        cap = strsub(msg, last_end)
+        cap = ssub(msg, last_end)
         table_insert(Table, cap)
     end
 
@@ -358,7 +357,7 @@ local function cname()
     local key, num = findsub(_g.keys)
     if num == 1 then
         local res = _cname(key)
-        return result(key)
+        return result()
     end
 
     return result()
@@ -398,7 +397,7 @@ local function a()
     local key, num = findsub(_g.keys)
     if num == 1 then
         local res = _a(key)
-        return result(key)
+        return result()
     end
 
     _g.keys[4] = "CNAME"
@@ -630,7 +629,7 @@ local function srv()
     local key, num = dns_exist_key(_g.keys)
     if num == 1 then
         local res = _srv(key)
-        return result(key)
+        return result()
     end
 
     return result()
