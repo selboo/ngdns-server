@@ -1,8 +1,8 @@
 # ngdns-server
 
- * 基于 OpenResty lua-resty-dns-server dns server
+ * 基于 OpenResty [lua-resty-dns-server](https://github.com/vislee/lua-resty-dns-server) dns server
 
- * 支持 A, AAAA, CNAME, NS, TXT, MX, SRV
+ * 支持 A, AAAA, CNAME, NS, TXT, MX, SRV [DNS记录类型列表](https://zh.wikipedia.org/wiki/DNS%E8%AE%B0%E5%BD%95%E7%B1%BB%E5%9E%8B%E5%88%97%E8%A1%A8)
 
  * 支持 区域解析 [ngx_stream_ipdb_module](https://github.com/vislee/ngx_stream_ipdb_module), IP地址库: [qqwry.ipdb](https://github.com/metowolf/qqwry.ipdb)
 
@@ -13,9 +13,9 @@
 # cd ngx_stream_ipdb_module
 # git checkout add-lua-api
 # cd ..
-# wget https://openresty.org/download/openresty-1.15.8.1.tar.gz
-# tar zxvf openresty-1.15.8.1.tar.gz
-# cd openresty-1.15.8.1
+# wget https://openresty.org/download/openresty-1.15.8.2.tar.gz
+# tar zxvf openresty-1.15.8.2.tar.gz
+# cd openresty-1.15.8.2
 # ./configure --prefix=/usr/local/openresty-dns/ --with-stream --add-module=../ngx_stream_ipdb_module/ --with-cc-opt="-I $PWD/build/ngx_stream_lua*/src"
 # gmake -j
 # gmake install
