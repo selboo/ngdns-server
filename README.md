@@ -26,7 +26,7 @@
 https://github.com/vislee/lua-resty-dns-server
 
 ```
-opm get vislee/lua-resty-dns-server
+/usr/local/openresty-dns/bin/opm get vislee/lua-resty-dns-server
 ```
 
 ## install lua-resty-mlcache
@@ -34,7 +34,7 @@ opm get vislee/lua-resty-dns-server
 https://github.com/thibaultcha/lua-resty-mlcache
 
 ```
-opm get thibaultcha/lua-resty-mlcache
+/usr/local/openresty-dns/bin/opm get thibaultcha/lua-resty-mlcache
 ```
 
 ## install lua-resty-logger-socket
@@ -42,14 +42,21 @@ opm get thibaultcha/lua-resty-mlcache
 https://github.com/p0pr0ck5/lua-resty-logger-socket
 
 ```
-opm get p0pr0ck5/lua-resty-logger-socket
+/usr/local/openresty-dns/bin/opm get p0pr0ck5/lua-resty-logger-socket
 ```
 
 ## install openresty-dns
 
 ```
-wget https://raw.githubusercontent.com/selboo/openresty-dns/master/53.lua \
+wget https://raw.githubusercontent.com/selboo/ngdns-server/master/53.lua \
  -O /usr/local/openresty-dns/nginx/conf/53.lua
+```
+
+## install qqwry.ipdb
+
+```
+wget https://cdn.jsdelivr.net/npm/qqwry.ipdb/qqwry.ipdb \
+ -O /usr/local/openresty-dns/nginx/conf/qqwry.ipdb
 ```
 
 ## install redis
@@ -92,6 +99,12 @@ stream {
         })
 
         _G.cache = cache
+
+        local redis_host = "127.0.0.1"
+        local redis_port = 6379
+
+        _G.redis_host = redis_host
+        _G.redis_port = redis_port
 
         local tld = {
             "aikaiyuan.com",
@@ -181,8 +194,8 @@ stream {
 ## dns query log
 
 ```
-2019-06-25 15:59:51 127.0.0.1 8.8.8.8 lb.aikaiyuan.com aikaiyuan.com lb * A aikaiyuan.com|lb|*|A
-2019-06-25 15:59:51 127.0.0.1 127.0.0.1 lb.aikaiyuan.com aikaiyuan.com lb * A aikaiyuan.com|lb|*|A
+2019-06-25 15:59:51 127.0.0.1 8.8.8.8 lb.aikaiyuan.com aikaiyuan.com lb * A aikaiyuan.com/lb/*/A
+2019-06-25 15:59:51 127.0.0.1 127.0.0.1 lb.aikaiyuan.com aikaiyuan.com lb * A aikaiyuan.com/lb/*/A
 ```
 
 > time client_ip subnet_ip domain tld sub view qtype redis_key
@@ -211,11 +224,11 @@ View | Code | Region |
 #### A
 
 ```
-## tld|sub|view|type   value|ttl   set
+## tld/sub/view/type   value/ttl   set
 # redis-cli
-127.0.0.1:6379> sadd aikaiyuan.com|lb|*|A 220.181.136.165|3600 220.181.136.166|3600 # 默认区域
+127.0.0.1:6379> sadd aikaiyuan.com/lb/*/A 220.181.136.165/3600 220.181.136.166/3600 # 默认区域
 OK
-127.0.0.1:6379> sadd aikaiyuan.com|lb|LT|A 123.125.23.1|3600 # 联通区域
+127.0.0.1:6379> sadd aikaiyuan.com/lb/LT/A 123.125.23.1/3600 # 联通区域
 OK
 # dig @127.0.0.1 lb.aikaiyuan.com
 ```
@@ -223,11 +236,11 @@ OK
 #### CNAME
 
 ```
-## tld|sub|view|type   value|ttl    set
+## tld/sub/view/type   value/ttl    set
 # redis-cli
-127.0.0.1:6379> sadd aikaiyuan.com|www|*|CNAME   aikaiyuan.appchizi.com.|3600  # 默认区域
+127.0.0.1:6379> sadd aikaiyuan.com/www/*/CNAME   aikaiyuan.appchizi.com./3600  # 默认区域
 OK
-127.0.0.1:6379> sadd aikaiyuan.com|www|DX|CNAME   dx.appchizi.com.|60  # 电信区域
+127.0.0.1:6379> sadd aikaiyuan.com/www/DX/CNAME   dx.appchizi.com./60  # 电信区域
 OK
 # dig @127.0.0.1 www.aikaiyuan.com CNAME
 ```
@@ -235,9 +248,9 @@ OK
 #### AAAA
 
 ```
-## tld|sub|view|type   value|ttl   set
+## tld/sub/view/type   value/ttl   set
 # redis-cli
-127.0.0.1:6379> sadd aikaiyuan.com|ipv6|*|AAAA 240c::6666|60 240c::8888|60
+127.0.0.1:6379> sadd aikaiyuan.com/ipv6/*/AAAA 240c::6666/60 240c::8888/60
 OK
 # dig @127.0.0.1 ipv6.aikaiyuan.com AAAA
 ```
@@ -245,9 +258,9 @@ OK
 #### NS
 
 ```
-## tld|sub|view|type   value|ttl   set
+## tld/sub/view/type   value/ttl   set
 # redis-cli
-127.0.0.1:6379> sadd aikaiyuan.com|ns|*|NS ns10.aikaiyuan.com.|86400
+127.0.0.1:6379> sadd aikaiyuan.com/ns/*/NS ns10.aikaiyuan.com./86400
 OK
 # dig @127.0.0.1 ns.aikaiyuan.com NS
 ```
@@ -255,9 +268,9 @@ OK
 #### TXT
 
 ```
-## tld|sub|view|type   value|ttl   set
+## tld/sub/view/type   value/ttl   set
 # redis-cli
-127.0.0.1:6379> sadd aikaiyuan.com|txt|*|TXT txt.aikaiyuan.com|1200
+127.0.0.1:6379> sadd aikaiyuan.com/txt/*/TXT txt.aikaiyuan.com/1200
 OK
 # dig @127.0.0.1 txt.aikaiyuan.com txt
 ```
@@ -265,9 +278,9 @@ OK
 #### MX
 
 ```
-## tld|sub|view|type   value|ttl|preference   set
+## tld/sub/view/type   value/ttl/preference   set
 # redis-cli
-127.0.0.1:6379> sadd aikaiyuan.com|@|*|MX smtp1.qq.com.|720|10 smtp2.qq.com.|720|10
+127.0.0.1:6379> sadd aikaiyuan.com/@/*/MX smtp1.qq.com./720/10 smtp2.qq.com./720/10
 OK
 # dig @127.0.0.1 aikaiyuan.com MX
 ```
@@ -275,9 +288,9 @@ OK
 #### SRV
 
 ```
-## tld|sub|view|type   priority|weight|port|value|ttl
+## tld/sub/view/type   priority/weight/port/value/ttl
 # redis-cli
-127.0.0.1:6379> sadd aikaiyuan.com|srv|*|SRV 1|100|800|www.aikaiyuan.com|120
+127.0.0.1:6379> sadd aikaiyuan.com/srv/*/SRV 1/100/800/www.aikaiyuan.com/120
 OK
 # dig @127.0.0.1 srv.aikaiyuan.com SRV
 ```

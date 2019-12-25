@@ -3,6 +3,7 @@ local DEBUG = false
 
 require 'resty.core.regex'
 
+local re     = require "ngx.re"
 local cjson  = require "cjson"
 local redis  = require "resty.redis"
 local sipdb  = require "ngx.stream.ipdb"
@@ -38,7 +39,7 @@ local _g = {
     request     = "",
     query       = "",
 
-    separator   = '|',
+    separator   = '/',
     request_remote_addr = request_remote_addr,
     eip         = "",
     view        = "",
@@ -88,43 +89,11 @@ local _g = {
 
 }
 
-local function split(s, p)
-
-    local r = {}
-    gsub(s, '[^'..p..']+', function(w) table_insert(r, w) end )
-    return r
-
-end
-
-local function ipdb_split(msg)
-
-    local Table = {}
-    local fpat = "(.-)\t"
-    local last_end = 1
-    local s, e, cap = strfind(msg, fpat, 1)
-
-    while s do
-        if s ~= 1 or cap ~= "" then
-            table_insert(Table,cap)
-        end
-        last_end = e+1
-        s, e, cap = strfind(msg, fpat, last_end)
-    end
-
-    if last_end <= #msg + 1 then
-        cap = ssub(msg, last_end)
-        table_insert(Table, cap)
-    end
-
-    return Table
-
-end
-
 local function redisconnect()
 
-    local ok, err = red:connect("127.0.0.1", 6379)
+    local ok, err = red:connect(_G.redis_host, _G.redis_port)
     if not ok then
-        ngx.log(ngx.ERR, "1003 connect 127.0.0.1:6379 redis fail: ", err)
+        ngx.log(ngx.ERR, "1003 connect redis fail: ", err)
         return false, err
     end
 
@@ -179,7 +148,7 @@ end
 local function findsub( key )
 
     -- keys = {"aikaiyuan.com", "lb", "DX", "A"}
-    local sub = split(key[2], "\\.")
+    local sub = re.split(key[2], "\\.")
     if #sub == 1 then
         return key, 0
     end
@@ -299,13 +268,17 @@ local function ip_to_isp ()
     local view = ""
     ngx.log(ngx.DEBUG, "_g.eip: ", _g.eip)
     local raw = sipdb.get_raw(_g.eip)
-    local ipdb = ipdb_split(raw)
+    ngx.log(ngx.DEBUG, "raw: ", raw)
+    local ipdb = re.split(raw, '\t')
 
     local country_name = ipdb[1]
     local region_name  = ipdb[2]
     -- local city_name    = ipdb[3]
     -- local owner_domain = ipdb[4]
     local isp_domain   = ipdb[5]
+    ngx.log(ngx.DEBUG, "country_name: ", country_name)
+    ngx.log(ngx.DEBUG, "region_name: ", region_name)
+    ngx.log(ngx.DEBUG, "isp_domain: ", isp_domain)
 
     if country_name == "中国" then
         view = _G.VIEWS[isp_domain] or "*"
@@ -335,7 +308,7 @@ local function _cname( key )
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, _g.key.qtype, " ", data)
 
-        local info  = split(data, _g.separator)
+        local info  = re.split(data, _g.separator)
         local value = info[1]
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
@@ -375,7 +348,7 @@ local function _a( key )
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, _g.key.qtype, " ", data)
 
-        local info  = split(data, _g.separator)
+        local info  = re.split(data, _g.separator)
         local value = info[1]
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
@@ -408,7 +381,7 @@ end
 local function _full_aaaa(ipv6)
 
     local m = {":"}
-    local n = split(ipv6, ':')
+    local n = re.split(ipv6, ':')
 
     for i = 1, 8 - #n do
         table_insert(m, ":")
@@ -429,7 +402,7 @@ local function _aaaa( key )
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, _g.key.qtype, " ", data)
 
-        local info  = split(data, _g.separator)
+        local info  = re.split(data, _g.separator)
         local value = info[1]
         if find(value, '::') then
             value = _full_aaaa(value)
@@ -472,7 +445,7 @@ local function _ns( key )
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, _g.key.qtype, " ", data)
 
-        local info  = split(data, _g.separator)
+        local info  = re.split(data, _g.separator)
         local value = info[1]
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
@@ -526,7 +499,7 @@ local function _mx( key )
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, _g.key.qtype, " ", data)
 
-        local info  = split(data, _g.separator)
+        local info  = re.split(data, _g.separator)
         local value = info[1]
         local ttl   = info[2]
         local preference = info[3]
@@ -567,7 +540,7 @@ local function _txt( key )
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, _g.key.qtype, " ", data)
 
-        local info  = split(data, _g.separator)
+        local info  = re.split(data, _g.separator)
         local value = info[1]
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
@@ -607,7 +580,7 @@ local function _srv( key )
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, _g.key.qtype, " ", data)
 
-        local info     = split(data, _g.separator)
+        local info     = re.split(data, _g.separator)
         local priority = info[1]
         local weight   = info[2]
         local port     = info[3]
