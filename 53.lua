@@ -305,8 +305,8 @@ end
 
 local function _cname( key )
     -- CNAME
-    --     tld|sub|view|type   value|ttl
-    -- sadd aikaiyuan.com|www|*|CNAME   aikaiyuan.appchizi.com.|3600
+    --     tld/sub/view/type   value/ttl
+    -- sadd aikaiyuan.com/www/*/CNAME   aikaiyuan.appchizi.com./3600
 
     local redis_value = dns_get_key(key)
     ngx.log(ngx.DEBUG, "_cname key: ", key)
@@ -345,8 +345,8 @@ end
 
 local function _a( key )
     -- A
-    --     tld|sub|view|type   value|ttl
-    -- sadd aikaiyuan.com|lb|*|A 220.181.136.165|3600 220.181.136.166|3600
+    --     tld/sub/view/type   value/ttl
+    -- sadd aikaiyuan.com/lb/*/A 220.181.136.165/3600 220.181.136.166/3600
 
     local redis_value = dns_get_key(key)
     ngx.log(ngx.DEBUG, "_a key: ", key)
@@ -393,8 +393,8 @@ end
 
 local function _aaaa( key )
     -- AAAA
-    --     tld|sub|view|type   value|ttl
-    -- sadd aikaiyuan.com|ipv6|*|AAAA 2400:89c0:1022:657::152:150|86400 2400:89c0:1032:157::31:1201|86400
+    --     tld/sub/view/type   value/ttl
+    -- sadd aikaiyuan.com/ipv6/*/AAAA 2400:89c0:1022:657::152:150/86400 2400:89c0:1032:157::31:1201/86400
 
     local redis_value = dns_get_key(key)
     ngx.log(ngx.DEBUG, "_aaaa key: ", key)
@@ -436,8 +436,8 @@ end
 
 local function _ns( key )
     -- NS
-    --     tld|sub|view|type   value|ttl
-    -- sadd aikaiyuan.com|ns|*|NS ns10.aikaiyuan.com.|86400
+    --     tld/sub/view/type   value/ttl
+    -- sadd aikaiyuan.com/ns/*/NS ns10.aikaiyuan.com./86400
 
     local redis_value = dns_get_key(key)
     ngx.log(ngx.DEBUG, "_ns key: ", key)
@@ -490,8 +490,8 @@ end
 
 local function _mx( key )
     -- MX
-    --     tld|sub|view|type   value|ttl|preference
-    -- sadd aikaiyuan.com|@|*|MX smtp1.qq.com.|720|10 smtp2.qq.com.|720|10
+    --     tld/sub/view/type   value/ttl/preference
+    -- sadd aikaiyuan.com/@/*/MX smtp1.qq.com./720/10 smtp2.qq.com./720/10
 
     local redis_value = dns_get_key(key)
     ngx.log(ngx.DEBUG, "_mx key: ", key)
@@ -531,8 +531,8 @@ end
 
 local function _txt( key )
     -- TXT
-    --     tld|sub|view|type   value|ttl
-    -- sadd aikaiyuan.com|txt|*|TXT txt.aikaiyuan.com|1200
+    --     tld/sub/view/type   value/ttl
+    -- sadd aikaiyuan.com/txt/*/TXT txt.aikaiyuan.com/1200
 
     local redis_value = dns_get_key(key)
     ngx.log(ngx.DEBUG, "_txt key: ", key)
@@ -571,8 +571,8 @@ end
 
 local function _srv( key )
     -- SRV
-    --     tld|sub|view|type   priority|weight|port|value|ttl
-    -- sadd aikaiyuan.com|srv|*|SRV 1|100|800|www.aikaiyuan.com|120
+    --     tld/sub/view/type   priority/weight/port/value/ttl
+    -- sadd aikaiyuan.com/srv/*/SRV 1/100/800/www.aikaiyuan.com/120
 
     local redis_value = dns_get_key(key)
     ngx.log(ngx.DEBUG, "_srv key: ", key)
