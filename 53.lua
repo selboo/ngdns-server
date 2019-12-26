@@ -9,12 +9,12 @@ local redis  = require "resty.redis"
 local sipdb  = require "ngx.stream.ipdb"
 local server = require 'resty.dns.server'
 
-local gsub    = string.gsub   -- no
 local ssub    = string.sub    -- yes
 local strlen  = string.len    -- yes
 local strfind = string.find   -- 2.1 partial Only fixed string searches (no patterns).
 local strlower = string.lower -- 2.1
 local find    = ngx.re.find
+local sub     = ngx.re.sub
 
 local table_insert = table.insert   -- no
 local table_concat = table.concat   -- 2.1
@@ -85,7 +85,18 @@ local _g = {
         qtype = "_"
     },
 
-    keys = {}
+    keys = {},
+
+    ipv6 = {
+        [9] = {":"},
+        [8] = {":",":"},
+        [7] = {":",":",":"},
+        [6] = {":",":",":",":"},
+        [5] = {":",":",":",":",":"},
+        [4] = {":",":",":",":",":",":"},
+        [3] = {":",":",":",":",":",":",":"},
+        [2] = {":",":",":",":",":",":",":",":"},
+    }
 
 }
 
@@ -375,14 +386,8 @@ end
 
 local function _full_aaaa(ipv6)
 
-    local m = {":"}
     local n = re.split(ipv6, ':')
-
-    for i = 1, 8 - #n do
-        table_insert(m, ":")
-    end
-
-    return gsub(ipv6, "::", table_concat(m, "0"))
+    return sub(ipv6, "::", table_concat(_g.ipv6[#n], "0"))
 
 end
 
