@@ -15,11 +15,10 @@ local strfind = string.find   -- 2.1 partial Only fixed string searches (no patt
 local strlower = string.lower -- 2.1
 local find    = ngx.re.find
 local sub     = ngx.re.sub
+local utctime = ngx.utctime
 
-local table_insert = table.insert   -- no
 local table_concat = table.concat   -- 2.1
 local table_remove = table.remove   -- 2.1
-
 
 local cjson_encode = cjson.encode
 local cjson_decode = cjson.decode
@@ -27,7 +26,6 @@ local cjson_decode = cjson.decode
 local dns = server:new()
 local red = redis:new()
 red:set_timeout(3000)
-
 
 local request_remote_addr = ngx.var.remote_addr
 
@@ -58,7 +56,7 @@ local _g = {
     },
 
     log = {
-        time      = os.date("%Y-%m-%d %H:%M:%S", os.time()),
+        time      = utctime(),
         client_ip = request_remote_addr,
         subnet_ip = "_",
         domain    = "_",
@@ -207,8 +205,10 @@ end
 
 local function result()
 
+    local nsort = 0
     for k, v in pairs(_g.log_sort) do
-        table_insert(_g.logs, _g.log[v])
+        nsort = nsort + 1
+        _g.logs[nsort] = _g.log[v]
     end
     ngx.ctx.log = table_concat(_g.logs, " ")
     ngx.log(ngx.DEBUG, "query log: ", ngx.ctx.log)
@@ -672,10 +672,10 @@ if err then
     return result()
 end
 
--- _g.keys = {tld,              sub, view, qtype}
--- _g.keys = {"aikaiyuan.com", "lb", "DX", "A"}
+local nkeys = 0
 for index, data in ipairs(_g.key_sort) do
-    table_insert(_g.keys, _g.key[data])
+    nkeys = nkeys + 1
+    _g.keys[nkeys] = _g.key[data]
 end
 
 main[_g.key.qtype]()
