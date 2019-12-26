@@ -222,12 +222,7 @@ local function sub_tld()
     end
     local qname = strlower(_g.query.qname)
 
-    local subnet = _g.request.subnet
-    if #subnet == 1 then
-        _g.eip = subnet[1].address or request_remote_addr
-    else
-        _g.eip = request_remote_addr
-    end
+    _g.eip = _g.request.subnet[1].address or request_remote_addr
 
     ngx.log(ngx.DEBUG, " qname: ", qname, " qclass: ", _g.query.qclass,
             " qtype: ", _g.query.qtype,  " ngx.var.remote_addr: ", request_remote_addr,
