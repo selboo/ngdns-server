@@ -36,11 +36,11 @@ local _g = {
     req         = "",
     request     = "",
     query       = "",
+    view        = "",
 
     separator   = '/',
     request_remote_addr = request_remote_addr,
-    eip         = "",
-    view        = "",
+    eip                 = request_remote_addr,
 
     -- time client_ip subnet_ip domain tld sub view qtype redis_key
     log_sort = {
@@ -233,7 +233,10 @@ local function sub_tld()
     end
     local qname = strlower(_g.query.qname)
 
-    _g.eip = _g.request.subnet[1].address or request_remote_addr
+    local subnet = _g.request.subnet
+    if subnet and #subnet == 1 then
+        _g.eip = subnet[1].address or request_remote_addr
+    end
 
     ngx.log(ngx.DEBUG, " qname: ", qname, " qclass: ", _g.query.qclass,
             " qtype: ", _g.query.qtype,  " ngx.var.remote_addr: ", request_remote_addr,
