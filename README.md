@@ -226,9 +226,9 @@ View | Code | Region |
 ```
 ## tld/sub/view/type   value/ttl   set
 # redis-cli
-127.0.0.1:6379> sadd aikaiyuan.com/lb/*/A 220.181.136.165/3600 220.181.136.166/3600 # 默认区域
+127.0.0.1:6379> sadd aikaiyuan.com/lb/*/A 220.181.1.1/3600 220.181.2.2/3600 # 默认区域
 OK
-127.0.0.1:6379> sadd aikaiyuan.com/lb/LT/A 123.125.23.1/3600 # 联通区域
+127.0.0.1:6379> sadd aikaiyuan.com/lb/LT/A 123.125.3.3/3600 # 联通区域
 OK
 # dig @127.0.0.1 lb.aikaiyuan.com
 ```
@@ -297,10 +297,10 @@ OK
 
 # TODO
 
- * edns-client-subnet
- * ngdns-api
+ * [x] edns-client-subnet
+ * [ ] ngdns-api
 
-# Thinks
+# Thanks
 
  * https://github.com/vislee/lua-resty-dns-server
  * https://github.com/vislee/ngx_stream_ipdb_module

@@ -162,9 +162,9 @@ local function findsub( key )
         return key, 0
     end
 
-    for k, v in ipairs(sub) do
-        sub[k] = "*"
-        key[2] = table_concat(sub, ".", k)
+    for index, _ in ipairs(sub) do
+        sub[index] = "*"
+        key[2] = table_concat(sub, ".", index)
 
         local new_key, num = dns_exist_key(key)
         if num == 1 then
@@ -206,9 +206,9 @@ end
 local function result()
 
     local nsort = 0
-    for k, v in pairs(_g.log_sort) do
+    for _, data in pairs(_g.log_sort) do
         nsort = nsort + 1
-        _g.logs[nsort] = _g.log[v]
+        _g.logs[nsort] = _g.log[data]
     end
     ngx.ctx.log = table_concat(_g.logs, " ")
     ngx.log(ngx.DEBUG, "query log: ", ngx.ctx.log)
@@ -676,7 +676,7 @@ if err then
 end
 
 local nkeys = 0
-for index, data in ipairs(_g.key_sort) do
+for _, data in ipairs(_g.key_sort) do
     nkeys = nkeys + 1
     _g.keys[nkeys] = _g.key[data]
 end
