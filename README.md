@@ -6,6 +6,22 @@
 
  * 支持 区域解析 [ngx_stream_ipdb_module](https://github.com/vislee/ngx_stream_ipdb_module), IP地址库: [qqwry.ipdb](https://github.com/metowolf/qqwry.ipdb)
 
+
+## docker
+
+```
+# docker pull selboo/ngdns-server
+# docker run -itd -p 3053:53/udp selboo/ngdns-server
+
+# dig @127.0.0.1 -p 3053 a.aikaiyuan.com | grep -A 3 "ANSWER SECTION"
+# dig @127.0.0.1 -p 3053 c.aikaiyuan.com | grep -A 3 "ANSWER SECTION"
+# dig @127.0.0.1 -p 3053 6.aikaiyuan.com AAAA | grep -A 3 "ANSWER SECTION"
+# dig @127.0.0.1 -p 3053 t.aikaiyuan.com TXT | grep -A 3 "ANSWER SECTION"
+# dig @127.0.0.1 -p 3053 aikaiyuan.com NS | grep -A 3 "ANSWER SECTION"
+# dig @127.0.0.1 -p 3053 aikaiyuan.com MX | grep -A 3 "ANSWER SECTION"
+# dig @127.0.0.1 -p 3053 srv.aikaiyuan.com SRV | grep -A 3 "ANSWER SECTION"
+```
+
 ## install openresty
 
 ```
@@ -13,10 +29,10 @@
 # cd ngx_stream_ipdb_module
 # git checkout add-lua-api
 # cd ..
-# wget https://openresty.org/download/openresty-1.15.8.2.tar.gz
-# tar zxvf openresty-1.15.8.2.tar.gz
-# cd openresty-1.15.8.2
-# ./configure --prefix=/usr/local/openresty-dns/ --with-stream --add-module=../ngx_stream_ipdb_module/ --with-cc-opt="-I $PWD/build/ngx_stream_lua*/src"
+# wget https://openresty.org/download/openresty-1.17.8.1.tar.gz
+# tar zxvf openresty-1.17.8.1.tar.gz
+# cd openresty-1.17.8.1
+# ./configure --prefix=/usr/local/ngdns-server/ --with-stream --add-module=../ngx_stream_ipdb_module/ --with-cc-opt="-I $PWD/build/ngx_stream_lua*/src"
 # gmake -j
 # gmake install
 ```
@@ -26,7 +42,7 @@
 https://github.com/vislee/lua-resty-dns-server
 
 ```
-/usr/local/openresty-dns/bin/opm get vislee/lua-resty-dns-server
+/usr/local/ngdns-server/bin/opm get vislee/lua-resty-dns-server
 ```
 
 ## install lua-resty-mlcache
@@ -34,7 +50,7 @@ https://github.com/vislee/lua-resty-dns-server
 https://github.com/thibaultcha/lua-resty-mlcache
 
 ```
-/usr/local/openresty-dns/bin/opm get thibaultcha/lua-resty-mlcache
+/usr/local/ngdns-server/bin/opm get thibaultcha/lua-resty-mlcache
 ```
 
 ## install lua-resty-logger-socket
@@ -42,21 +58,21 @@ https://github.com/thibaultcha/lua-resty-mlcache
 https://github.com/p0pr0ck5/lua-resty-logger-socket
 
 ```
-/usr/local/openresty-dns/bin/opm get p0pr0ck5/lua-resty-logger-socket
+/usr/local/ngdns-server/bin/opm get p0pr0ck5/lua-resty-logger-socket
 ```
 
 ## install openresty-dns
 
 ```
 wget https://raw.githubusercontent.com/selboo/ngdns-server/master/53.lua \
- -O /usr/local/openresty-dns/nginx/conf/53.lua
+ -O /usr/local/ngdns-server/nginx/conf/53.lua
 ```
 
 ## install qqwry.ipdb
 
 ```
 wget https://cdn.jsdelivr.net/npm/qqwry.ipdb/qqwry.ipdb \
- -O /usr/local/openresty-dns/nginx/conf/qqwry.ipdb
+ -O /usr/local/ngdns-server/nginx/conf/qqwry.ipdb
 ```
 
 ## install redis
@@ -81,30 +97,28 @@ events {
 
 stream {
 
-    lua_package_path '/usr/local/openresty-dns/lualib/?.lua;/usr/local/openresty-dns/nginx/conf/?.lua;;';
-    lua_package_cpath '/usr/local/openresty-dns/lualib/?.so;;';
+    lua_package_path '/usr/local/ngdns-server/lualib/?.lua;/usr/local/ngdns-server/nginx/conf/?.lua;;';
+    lua_package_cpath '/usr/local/ngdns-server/lualib/?.so;;';
 
     lua_shared_dict QUERYCACHE 32m;
+    lua_shared_dict my_locks 1m;
 
-    ipdb /usr/local/openresty-dns/nginx/conf/qqwry.ipdb;
+    ipdb /usr/local/ngdns-server/nginx/conf/qqwry.ipdb;
     ipdb_language "CN";
 
     init_by_lua_block {
-        local mlcache = require "resty.mlcache"
+        local resty_lock = require "resty.lock"
+        local mlcache    = require "resty.mlcache"
 
         local cache, err = mlcache.new("my_cache", "QUERYCACHE", {
             lru_size = 100000,
             ttl      = 10,
             neg_ttl  = 10,
+            resty_lock_opts = resty_lock,
+            shm_locks = my_locks
         })
 
         _G.cache = cache
-
-        local redis_host = "127.0.0.1"
-        local redis_port = 6379
-
-        _G.redis_host = redis_host
-        _G.redis_port = redis_port
 
         local tld = {
             "aikaiyuan.com",
@@ -155,7 +169,16 @@ stream {
     server {
         listen 53 udp ;
 
-        content_by_lua_file conf/53.lua;
+        content_by_lua_block {
+            local ngdns       = require "53"
+            local new         = ngdns:new({
+                redis_host    = "127.0.0.1",
+                redis_port    = 6379,
+                redis_timeout = 5,
+            })
+
+            new:run_udp()
+        }
 
         log_by_lua_block {
 
@@ -177,9 +200,45 @@ stream {
             logger.log(ngx.ctx.log)
 
         }
-
     }
 
+
+    server {
+        listen 1053 ;
+
+        content_by_lua_block {
+            local ngdns       = require "53"
+            local new         = ngdns:new({
+                redis_host    = "127.0.0.1",
+                redis_port    = 6379,
+                redis_timeout = 5,
+                tcp           = 1,
+            })
+
+            new:run_tcp()
+        }
+
+        log_by_lua_block {
+
+            local logger = require "resty.logger.socket"
+            if not logger.initted() then
+                local ok, err = logger.init{
+                    host = '127.0.0.1',
+                    port = 514,
+                    sock_type = "udp",
+                    flush_limit = 1,
+                    drop_limit = 99999,
+                }
+                if not ok then
+                    ngx.log(ngx.ERR, "failed to initialize the logger: ", err)
+                    return
+                end
+            end
+
+            logger.log(ngx.ctx.log)
+
+        }
+    }
 
 }
 ```
@@ -188,7 +247,7 @@ stream {
 
 ```
 # systemctl restart redis
-# /usr/local/openresty-dns/nginx/sbin/nginx
+# /usr/local/ngdns-server/nginx/sbin/nginx
 ```
 
 ## dns query log
