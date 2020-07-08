@@ -11,7 +11,7 @@
 
 ```
 # docker pull selboo/ngdns-server
-# docker run -itd -p 3053:53/udp selboo/ngdns-server:1.2
+# docker run -itd -p 3053:53/udp selboo/ngdns-server
 
 # dig @127.0.0.1 -p 3053 a.aikaiyuan.com | grep -A 3 "ANSWER SECTION"
 # dig @127.0.0.1 -p 3053 c.aikaiyuan.com | grep -A 3 "ANSWER SECTION"
