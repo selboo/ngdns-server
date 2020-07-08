@@ -7,3 +7,8 @@ server.lua
 check.sh
 153.lua
 test.txt
+qqwry.ipdb
+dev.conf
+run.sh
+*.log
+*.pid
