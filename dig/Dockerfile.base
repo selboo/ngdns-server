@@ -1,0 +1,8 @@
+FROM frolvlad/alpine-glibc:latest
+
+
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
+    && apk add --no-cache gcc g++ make linux-headers openssl-dev libuv-dev perl
+
+
+
