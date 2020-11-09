@@ -28,10 +28,11 @@
 # git clone https://github.com/vislee/ngx_stream_ipdb_module.git
 # cd ngx_stream_ipdb_module
 # git checkout add-lua-api
+# sed -i 's/ngx_stream_lua_get_request/ngx_stream_lua_get_req/g' ngx_stream_ipdb_lua.c
 # cd ..
-# wget https://openresty.org/download/openresty-1.17.8.1.tar.gz
-# tar zxvf openresty-1.17.8.1.tar.gz
-# cd openresty-1.17.8.1
+# wget https://openresty.org/download/openresty-1.19.3.1.tar.gz
+# tar zxvf openresty-1.19.3.1.tar.gz
+# cd openresty-1.19.3.1
 # ./configure --prefix=/usr/local/ngdns-server/ --with-stream --add-module=../ngx_stream_ipdb_module/ --with-cc-opt="-I $PWD/build/ngx_stream_lua*/src"
 # gmake -j
 # gmake install
@@ -43,6 +44,8 @@ https://github.com/vislee/lua-resty-dns-server
 
 ```
 /usr/local/ngdns-server/bin/opm get vislee/lua-resty-dns-server
+wget https://github.com/vislee/lua-resty-dns-server/raw/add-feature-subnet/lib/resty/dns/server.lua \
+/usr/local/ngdns-server/site/lualib/resty/dns/server.lua
 ```
 
 ## install lua-resty-mlcache

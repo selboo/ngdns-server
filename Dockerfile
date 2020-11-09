@@ -3,7 +3,7 @@ FROM centos:7
 LABEL maintainer="Selboo <root@selboo.com>"
 
 ENV APP_PATH=/app
-ENV OPENRESTY_VERSION="1.17.8.1"
+ENV OPENRESTY_VERSION="1.19.3.1"
 ENV OPENRESTY_PATH=/usr/local/ngdns-server
 ENV PATH $OPENRESTY_PATH/bin:$PATH
 
@@ -18,6 +18,7 @@ RUN yum install -y perl make gcc unzip redis perl-Digest-MD5 \
     && rm -fr /tmp/* /var/cache/yum/* \
     && tar zxvf openresty-${OPENRESTY_VERSION}.tar.gz \
     && unzip ngx_stream_ipdb_module-add-lua-api.zip \
+    && sed -i 's/ngx_stream_lua_get_request/ngx_stream_lua_get_req/g' /app/ngx_stream_ipdb_module-add-lua-api/ngx_stream_ipdb_lua.c \
     && cd openresty-${OPENRESTY_VERSION} \
     && ./configure --prefix=$OPENRESTY_PATH --with-stream \
         --add-module=/app/ngx_stream_ipdb_module-add-lua-api/ \
@@ -28,7 +29,7 @@ RUN yum install -y perl make gcc unzip redis perl-Digest-MD5 \
 FROM centos:7
 
 ENV APP_PATH=/app
-ENV OPENRESTY_VERSION="1.17.8.1"
+ENV OPENRESTY_VERSION="1.19.3.1"
 ENV OPENRESTY_PATH=/usr/local/ngdns-server
 ENV PATH $OPENRESTY_PATH/bin:$PATH
 
@@ -48,6 +49,7 @@ RUN yum install -y redis bind-utils wget perl perl-Digest-MD5 \
     && yum clean all \
     && rm -fr /tmp/* /var/cache/yum/* \
     && opm get vislee/lua-resty-dns-server \
+    && wget https://github.com/vislee/lua-resty-dns-server/raw/add-feature-subnet/lib/resty/dns/server.lua -O /usr/local/ngdns-server/site/lualib/resty/dns/server.lua \
     && opm get thibaultcha/lua-resty-mlcache \ 
     && opm get p0pr0ck5/lua-resty-logger-socket \
     && mkdir -p $APP_PATH/logs \
