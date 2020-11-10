@@ -36,6 +36,10 @@ echo 'sadd aikaiyuan.com/t/*/TXT "is txt/30"' | redis-cli
 echo "del  aikaiyuan.com/srv/*/SRV" | redis-cli
 echo "sadd aikaiyuan.com/srv/*/SRV 1/100/800/a.aikaiyuan.com/120" | redis-cli
 
+# test unit SOA
+echo "del aikaiyuan.com/SOA" | redis-cli
+echo "set aikaiyuan.com/SOA ns1.aikaiyuan.com/domain.aikaiyuan.com/163/3600/3600/604800/86400/7200" | redis-cli
+
 
 openresty -p /app -c nginx.conf -g 'daemon off;'
 

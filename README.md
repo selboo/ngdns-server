@@ -2,7 +2,7 @@
 
  * 基于 OpenResty [lua-resty-dns-server](https://github.com/vislee/lua-resty-dns-server) dns server
 
- * 支持 A, AAAA, CNAME, NS, TXT, MX, SRV [DNS记录类型列表](https://zh.wikipedia.org/wiki/DNS%E8%AE%B0%E5%BD%95%E7%B1%BB%E5%9E%8B%E5%88%97%E8%A1%A8)
+ * 支持 A, AAAA, CNAME, NS, TXT, MX, SRV, SOA [DNS记录类型列表](https://zh.wikipedia.org/wiki/DNS%E8%AE%B0%E5%BD%95%E7%B1%BB%E5%9E%8B%E5%88%97%E8%A1%A8)
 
  * 支持 区域解析 [ngx_stream_ipdb_module](https://github.com/vislee/ngx_stream_ipdb_module), IP地址库: [qqwry.ipdb](https://github.com/metowolf/qqwry.ipdb)
 
@@ -20,6 +20,7 @@
 # dig @127.0.0.1 -p 3053 aikaiyuan.com NS | grep -A 3 "ANSWER SECTION"
 # dig @127.0.0.1 -p 3053 aikaiyuan.com MX | grep -A 3 "ANSWER SECTION"
 # dig @127.0.0.1 -p 3053 srv.aikaiyuan.com SRV | grep -A 3 "ANSWER SECTION"
+# dig @127.0.0.1 -p 3053 aikaiyuan.com SOA | grep -A 3 "ANSWER SECTION"
 ```
 
 ## install openresty
@@ -364,7 +365,7 @@ OK
 # redis-cli
 127.0.0.1:6379> sadd aikaiyuan.com/SOA ns1.aikaiyuan.com/domain.aikaiyuan.com/1558348800/1800/900/604800/86400/7200
 OK
-# dig @127.0.0.1 aikaiyuan.com SOR
+# dig @127.0.0.1 aikaiyuan.com SOA
 
 ```
 

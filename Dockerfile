@@ -9,6 +9,8 @@ ENV PATH $OPENRESTY_PATH/bin:$PATH
 
 WORKDIR $APP_PATH
 
+ADD http://mirrors.aliyun.com/repo/epel-7.repo /etc/yum.repos.d/epel.repo
+ADD http://mirrors.aliyun.com/repo/Centos-7.repo /etc/yum.repos.d/CentOS-Base.repo
 ADD https://openresty.org/download/openresty-${OPENRESTY_VERSION}.tar.gz $APP_PATH
 ADD https://github.com/vislee/ngx_stream_ipdb_module/archive/add-lua-api.zip $APP_PATH/ngx_stream_ipdb_module-add-lua-api.zip
 
@@ -37,6 +39,7 @@ WORKDIR $APP_PATH
 
 ADD https://cdn.jsdelivr.net/npm/qqwry.ipdb/qqwry.ipdb $APP_PATH
 ADD http://mirrors.aliyun.com/repo/epel-7.repo /etc/yum.repos.d/epel.repo
+ADD http://mirrors.aliyun.com/repo/Centos-7.repo /etc/yum.repos.d/CentOS-Base.repo
 
 COPY nginx.conf $APP_PATH
 COPY 53.lua $APP_PATH
