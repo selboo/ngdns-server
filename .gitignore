@@ -12,3 +12,5 @@ dev.conf
 run.sh
 *.log
 *.pid
+dev.nginx.conf
+new_server.lua

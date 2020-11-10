@@ -357,6 +357,26 @@ OK
 # dig @127.0.0.1 srv.aikaiyuan.com SRV
 ```
 
+#### SOA
+
+```
+## tld/type   mname/rname/serial/refresh/retry/expire/minimum/ttl
+# redis-cli
+127.0.0.1:6379> sadd aikaiyuan.com/SOA ns1.aikaiyuan.com/domain.aikaiyuan.com/1558348800/1800/900/604800/86400/7200
+OK
+# dig @127.0.0.1 aikaiyuan.com SOR
+
+```
+
+ * mname   名称服务器的 <domain-name>，该名称服务器是这个区域的数据起源或主要源。
+ * rname   一个<domain-name>，它规定负责这个区域的个人的邮箱。由于不支持 @ 这里使用 . 替代  domain.aikaiyuan.com. <=> domain@aikaiyuan.com
+ * serial  该区域的原始副本的无符号 32 位版本号。区域传递保存这个值。这个值叠起(wrap)，并且应当使用系列空间算法比较这个值。
+ * refresh 区域应当被刷新前的 32 位时间间隔
+ * retry   在重试失败的刷新前，应当等待的 32 位时间间隔
+ * expire  32 位时间值，它规定在区域不再是权威的之前可以等待的时间间隔的上限
+ * minimum 无符号 32 位最小值 TTL 字段，应当用来自这个区域的任何 RR 输出它。
+ * ttl     TTL
+
 # TODO
 
  * [x] edns-client-subnet

@@ -16,6 +16,7 @@ local byte     = string.byte
 local char     = string.char
 local find     = ngx.re.find
 local sub      = ngx.re.sub
+local split    = re.split
 local utctime  = ngx.utctime
 
 local lshift = bit.lshift
@@ -130,10 +131,10 @@ local function redis_exist_key( self, key )
 
 end
 
-local function dns_exist_key( self )
+local function dns_exist_key( self, keys )
 
     -- keys = {"aikaiyuan.com", "lb", "DX", "A"}
-    local k = self.keys
+    local k = keys
     local view_tmp = k[3]
     local key = table_concat(k, self.separator)
     local value, err = cache:get("_exist_" .. key, nil, redis_exist_key, self, key)
@@ -151,9 +152,11 @@ local function dns_exist_key( self )
 
 end
 
+
+
 local function redis_get_key( self, key )
 
-    local ver, err = self.red:smembers(key)
+    local ver, err = self.red:get(key)
     return cjson_encode(ver)
 
 end
@@ -166,10 +169,25 @@ local function dns_get_key( self, key )
 
 end
 
-local function findsub( key )
+local function redis_smembers_key( self, key )
+
+    local ver, err = self.red:smembers(key)
+    return cjson_encode(ver)
+
+end
+
+local function dns_smembers_key( self, key )
+
+    self.log.redis_key = key
+    local value, err = cache:get(key, nil, redis_smembers_key, self, key)
+    return cjson_decode(value), _
+
+end
+
+local function findsub( self, key )
 
     -- keys = {"aikaiyuan.com", "lb", "DX", "A"}
-    local sub = re.split(key[2], "\\.")
+    local sub = split(key[2], "\\.")
     if #sub == 1 then
         return key, 0
     end
@@ -178,7 +196,7 @@ local function findsub( key )
         sub[index] = "*"
         key[2] = table_concat(sub, ".", index)
 
-        local new_key, num = dns_exist_key(key)
+        local new_key, num = dns_exist_key(self, key)
         if num == 1 then
             return new_key, num
         end
@@ -334,7 +352,7 @@ function _M.ip_to_isp (self)
     ngx.log(ngx.DEBUG, "self.eip: ", self.eip)
     local raw = sipdb.get_raw(self.eip)
     ngx.log(ngx.DEBUG, "raw: ", raw)
-    local ipdb = re.split(raw, '\t')
+    local ipdb = split(raw, '\t')
 
     local country_name = ipdb[1]
     local region_name  = ipdb[2]
@@ -367,13 +385,13 @@ local function _cname( self, key )
     --     tld/sub/view/type   value/ttl
     -- sadd aikaiyuan.com/www/*/CNAME   aikaiyuan.appchizi.com./3600
 
-    local redis_value = dns_get_key(self, key)
+    local redis_value = dns_smembers_key(self, key)
     ngx.log(ngx.DEBUG, "_cname key: ", key)
 
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, self.key.qtype, " ", data)
 
-        local info  = re.split(data, self.separator)
+        local info  = split(data, self.separator)
         local value = info[1]
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
@@ -389,13 +407,13 @@ end
 
 local function cname(self)
 
-    local key, num = dns_exist_key(self)
+    local key, num = dns_exist_key(self, self.keys)
     if num == 1 then
         local res = _cname(self, key)
         return result(self)
     end
 
-    local key, num = findsub(self.keys)
+    local key, num = findsub(self, self.keys)
     if num == 1 then
         local res = _cname(self, key)
         return result(self)
@@ -410,13 +428,13 @@ local function _a( self, key )
     --     tld/sub/view/type   value/ttl
     -- sadd aikaiyuan.com/lb/*/A 220.181.136.165/3600 220.181.136.166/3600
 
-    local redis_value = dns_get_key(self, key)
+    local redis_value = dns_smembers_key(self, key)
     ngx.log(ngx.DEBUG, "_a key: ", key)
 
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, self.key.qtype, " ", data)
 
-        local info  = re.split(data, self.separator)
+        local info  = split(data, self.separator)
         local value = info[1]
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
@@ -429,13 +447,13 @@ end
 
 local function a(self)
 
-    local key, num = dns_exist_key(self)
+    local key, num = dns_exist_key(self, self.keys)
     if num == 1 then
         local res = _a(self, key)
         return result(self)
     end
 
-    local key, num = findsub(self.keys)
+    local key, num = findsub(self, self.keys)
     if num == 1 then
         local res = _a(self, key)
         return result(self)
@@ -448,7 +466,7 @@ end
 
 local function _full_aaaa(self, ipv6)
 
-    local n = re.split(ipv6, ':')
+    local n = split(ipv6, ':')
     return sub(ipv6, "::", table_concat(self.ipv6[#n], "0"))
 
 end
@@ -458,13 +476,13 @@ local function _aaaa( self, key )
     --     tld/sub/view/type   value/ttl
     -- sadd aikaiyuan.com/ipv6/*/AAAA 2400:89c0:1022:657::152:150/86400 2400:89c0:1032:157::31:1201/86400
 
-    local redis_value = dns_get_key(self, key)
+    local redis_value = dns_smembers_key(self, key)
     ngx.log(ngx.DEBUG, "_aaaa key: ", key)
 
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, self.key.qtype, " ", data)
 
-        local info  = re.split(data, self.separator)
+        local info  = split(data, self.separator)
         local value = info[1]
         if find(value, '::') then
             value = _full_aaaa(self, value)
@@ -480,13 +498,13 @@ end
 
 local function aaaa(self)
 
-    local key, num = dns_exist_key(self)
+    local key, num = dns_exist_key(self, self.keys)
     if num == 1 then
         local res = _aaaa(self, key)
         return result(self)
     end
 
-    local key, num = findsub(self.keys)
+    local key, num = findsub(self, self.keys)
     if num == 1 then
         local res = _aaaa(self, key)
         return result(self)
@@ -501,13 +519,13 @@ local function _ns( self, key )
     --     tld/sub/view/type   value/ttl
     -- sadd aikaiyuan.com/ns/*/NS ns10.aikaiyuan.com./86400
 
-    local redis_value = dns_get_key(self, key)
+    local redis_value = dns_smembers_key(self, key)
     ngx.log(ngx.DEBUG, "_ns key: ", key)
 
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, self.key.qtype, " ", data)
 
-        local info  = re.split(data, self.separator)
+        local info  = split(data, self.separator)
         local value = info[1]
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
@@ -520,13 +538,13 @@ end
 
 local function ns(self)
 
-    local key, num = dns_exist_key(self, keys)
+    local key, num = dns_exist_key(self, self.keys)
     if num == 1 then
         local res = _ns(self, key)
         return result(self)
     end
 
-    local key, num = findsub(self.keys)
+    local key, num = findsub(self, self.keys)
     if num == 1 then
         local res = _ns(self, key)
         return result(self)
@@ -538,10 +556,34 @@ end
 
 local function soa(self)
 
-    ngx.log(ngx.DEBUG, "function SOA, ")
+    local key = self.key.tld .. "/SOA"
 
-    self.dns:create_soa_answer("aikaiyuan.com", 600, "ns1.aikaiyuan.com.", "domain.aikaiyuan.com.",
+    local value, err = cache:get("_exist_" .. key, nil, redis_exist_key, self, key)
+    if value == 1 then
+        local redis_value = dns_get_key(self, key)
+        ngx.log(ngx.DEBUG, "soa key: ", key)
+
+        local info  = split(redis_value, self.separator)
+        local mname = info[1]
+        local rname = info[2]
+        local serial = info[3]
+        local refresh = info[4]
+        local retry = info[5]
+        local expire = info[6]
+        local minimum = info[7]
+        local ttl = info[8]
+
+        ngx.log(ngx.DEBUG, "value: ", redis_value, " ttl: ", ttl)
+
+        -- function _M.create_soa_answer(self, name, ttl, mname, rname, serial, refresh, retry, expire, minimum)
+        self.dns:create_soa_answer(self.key.tld, ttl, mname, rname,
+                        serial, refresh, retry, expire, minimum)
+
+    else
+        self.dns:create_soa_answer(self.key.tld, 600, key, key,
                           1558348800, 1800, 900, 604800, 86400)
+    end
+
     return result(self)
 
 end
@@ -555,13 +597,13 @@ local function _mx( self, key )
     --     tld/sub/view/type   value/ttl/preference
     -- sadd aikaiyuan.com/@/*/MX smtp1.qq.com./720/10 smtp2.qq.com./720/10
 
-    local redis_value = dns_get_key(self, key)
+    local redis_value = dns_smembers_key(self, key)
     ngx.log(ngx.DEBUG, "_mx key: ", key)
 
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, self.key.qtype, " ", data)
 
-        local info  = re.split(data, self.separator)
+        local info  = split(data, self.separator)
         local value = info[1]
         local ttl   = info[2]
         local preference = info[3]
@@ -576,13 +618,13 @@ end
 
 local function mx(self)
 
-    local key, num = dns_exist_key(self, keys)
+    local key, num = dns_exist_key(self, self.keys)
     if num == 1 then
         local res = _mx(self, key)
         return result(self)
     end
 
-    local key, num = findsub(self.keys)
+    local key, num = findsub(self, self.keys)
     if num == 1 then
         local res = _mx(self, key)
         return result(self)
@@ -597,13 +639,13 @@ local function _txt( self, key )
     --     tld/sub/view/type   value/ttl
     -- sadd aikaiyuan.com/txt/*/TXT txt.aikaiyuan.com/1200
 
-    local redis_value = dns_get_key(self, key)
+    local redis_value = dns_smembers_key(self, key)
     ngx.log(ngx.DEBUG, "_txt key: ", key)
 
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, self.key.qtype, " ", data)
 
-        local info  = re.split(data, self.separator)
+        local info  = split(data, self.separator)
         local value = info[1]
         local ttl   = info[2]
         ngx.log(ngx.DEBUG, "value: ", value, " ttl: ", ttl)
@@ -616,13 +658,13 @@ end
 
 local function txt(self)
 
-    local key, num = dns_exist_key(self, keys)
+    local key, num = dns_exist_key(self, self.keys)
     if num == 1 then
         local res = _txt(self, key)
         return result(self)
     end
 
-    local key, num = findsub(_g.keys)
+    local key, num = findsub(self, self.keys)
     if num == 1 then
         local res = _txt(self, key)
         return result(self)
@@ -637,13 +679,13 @@ local function _srv( self, key )
     --     tld/sub/view/type   priority/weight/port/value/ttl
     -- sadd aikaiyuan.com/srv/*/SRV 1/100/800/www.aikaiyuan.com/120
 
-    local redis_value = dns_get_key(self, key)
+    local redis_value = dns_smembers_key(self, key)
     ngx.log(ngx.DEBUG, "_srv key: ", key)
 
     for _, data in ipairs(redis_value) do
         ngx.log(ngx.DEBUG, self.key.qtype, " ", data)
 
-        local info     = re.split(data, self.separator)
+        local info     = split(data, self.separator)
         local priority = info[1]
         local weight   = info[2]
         local port     = info[3]
@@ -662,7 +704,7 @@ end
 
 local function srv(self)
 
-    local key, num = dns_exist_key(self, keys)
+    local key, num = dns_exist_key(self, self.keys)
     if num == 1 then
         local res = _srv(self, key)
         return result(self)
