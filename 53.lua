@@ -580,7 +580,7 @@ local function soa(self)
                         serial, refresh, retry, expire, minimum)
 
     else
-        self.dns:create_soa_answer(self.key.tld, 600, key, key,
+        self.dns:create_soa_answer(self.key.tld, 600, self.key.tld, self.key.tld,
                           1558348800, 1800, 900, 604800, 86400)
     end
 
